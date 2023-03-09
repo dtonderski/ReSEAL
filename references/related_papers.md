@@ -1,5 +1,5 @@
 # Related papers
-#### Object Goal Navigation using Goal-Oriented Semantic Exploration (AKA SemExp) [[arxiv]](https://arxiv.org/abs/2007.00643)
+#### Object Goal Navigation using Goal-Oriented Semantic Exploration (AKA SemExp) [[arxiv]](https://arxiv.org/abs/2007.00643) [[GitHub]](https://github.com/devendrachaplot/Object-Goal-Navigation)
 This paper propose a modular system for the object goal navigation problem (ObjectNav), that splits the object goal navigation problem into a semantic mapping module and a goal-oriented semantic policy module
 
 #### SEAL: Self-supervised Embodied Active Learning using Exploration and 3D Consistency [[arxiv]](http://arxiv.org/abs/2212.00922)
