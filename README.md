@@ -8,5 +8,6 @@ Requirements:
 
 Steps:
 1. Navigate to the cloned repo
-2. Run `conda env create -f environment.yml`
-3. To activate your new environment, run `conda activate amber`
+2. Start the Anaconda terminal
+3. Run `conda env create -f environment.yml`
+4. To activate your new environment, run `conda activate amber`
