@@ -1,0 +1,56 @@
+{
+  "name": "ReSEAL",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "..",
+    "args": {
+      "USERNAME": "${localEnv:USER}"
+    }
+  },
+  "mounts": [
+  ],
+  "runArgs": [
+    "--gpus=all",
+    "--privileged",
+    "--shm-size=24G"
+  ],
+  "remoteUser": "${localEnv:USER}",
+  "updateRemoteUserUID": true,
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "mhutchie.git-graph",
+        "ms-python.python",
+        "eamodio.gitlens",
+        "njqdev.vscode-python-typehint",
+        "github.copilot"
+      ],
+      "settings": {
+        "editor.rulers": [
+          120
+        ],
+        "python.pythonPath": "/opt/conda/bin/python3",
+        "python.formatting.provider": "black",
+        "python.formatting.blackArgs": [
+          "--config", "./pyproject.toml"
+        ],
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.linting.pylintPath": "~/.local/bin/pylint",
+        "python.linting.pylintArgs": [
+          "--rcfile=${workspaceFolder}/pyproject.toml"
+        ],
+        "isort.args": [
+          "--settings-path=${workspaceFolder}/pyproject.toml"
+        ],
+        "python.testing.pytestArgs": [
+          "tests"
+        ],
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestPath": "~/.local/bin/pytest"
+      }
+    }
+  },
+  "postCreateCommand": "bash ./.devcontainer/post_create.sh"
+}
+  
