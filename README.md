@@ -1,5 +1,5 @@
-# AMBER
-Autonomous Mobile robot for Better Exploration and Recognition
+# ReSEAL
+Rethinking SEAL in the context of ObjectNav
 
 # Setup
 Requirements:
