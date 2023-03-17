@@ -8,12 +8,20 @@
     }
   },
   "mounts": [
+    {
+      "source": "${localEnv:HOME}/.Xauthority",
+      "target": "/home/${localEnv:USER}/.Xauthority",
+      "type": "bind"
+    }
   ],
   "runArgs": [
     "--gpus=all",
     "--privileged",
     "--shm-size=24G"
   ],
+  "containerEnv": {
+    "DISPLAY": "${localEnv:DISPLAY}"
+  },
   "remoteUser": "${localEnv:USER}",
   "updateRemoteUserUID": true,
   "customizations": {
