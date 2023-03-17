@@ -8,16 +8,13 @@
     }
   },
   "mounts": [
-    {
-      "source": "${localEnv:HOME}/.Xauthority",
-      "target": "/home/${localEnv:USER}/.Xauthority",
-      "type": "bind"
-    }
+    "source=${localEnv:HOME}/.Xauthority,target=/home/${localEnv:USER}/.Xauthority,type=bind"
   ],
   "runArgs": [
     "--gpus=all",
     "--privileged",
-    "--shm-size=24G"
+    "--shm-size=24G",
+    "--net=host"
   ],
   "containerEnv": {
     "DISPLAY": "${localEnv:DISPLAY}"
