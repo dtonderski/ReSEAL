@@ -1,4 +1,4 @@
-# ReSEAL: Rethinking SEAL in teh context of ObjectNav
+# ReSEAL: Rethinking SEAL in the context of ObjectNav
 This repository is an implementation of SEAL: Self-supervised Embodied Active Learning using Exploration and 3D Consistency [[arxiv]](https://arxiv.org/abs/2112.01001).
 SEAL is an algorithm to enable embodied agents to explore its environment and improve it perception model in a self-supervised manner.
 Exploration is driven by policy learned with reinforcement learning.
@@ -96,4 +96,37 @@ $ example_script --first-var foobar --second-var 42
 foobar 42
 ```
 
-# X-11 Forwarding on MacOS
+# X11 Forwarding
+To get GUIs running in docker containers to display, we need to setup X11 forwarding.
+The `devcontainer` is already setup for X11 forwarding.
+
+We mount the `.Xauthority` file in the devcontainer.
+If this doesn't file doesn't exist, simply create it:
+```bash
+touch ~/.Xauthority
+```
+or copy the existing file:
+```bash
+cp /run/usr/1000/gdm/Xauthority ~/.Xauthority
+```
+The existing file can be found by running `xauth info`
+
+If you encounter errors `Display not found` or `Could not initialize GLFW`, try running:
+```bash
+xhost +
+````
+This disables access control, allowing all clients to connect to the X server. To re-enable access control, run:
+```bash
+xhost -
+```
+
+### Status
+Summary of which setups work. Tested using `habitat-viewer`
+| Set up        | Status/Known issues   |
+| ------------- | -------------         |
+| `conda` installation on **ubuntu** machine | :white_check_mark:   |
+| `conda` installation on MacOs | :white_check_mark: |
+| `conda` installation on remote **ubuntu** machine, connected via SSH from MacOS | :x: Not working due to issues with OpenGL on MacOS  |
+| `devcontainer` running on local **ubuntu** machine  | :white_check_mark:      |
+| `devcontainer` running on remote **ubuntu** machine, connected via SSH from MacOS  | :x: Not working due to issues with OpenGL on MacOS|
+| `devcontainer` running local MacOS  | :x: Not working due to issues with OpenGL on MacOS|
