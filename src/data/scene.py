@@ -65,7 +65,7 @@ def initialize_scene(scene:str,
     }
 
     cfg = make_cfg(sim_settings)
-    # Needed to handle out of order cell run in Colab
+
     try:  # Got to make initialization idiot proof
         sim.close()
     except NameError:
@@ -84,4 +84,3 @@ def initialize_scene(scene:str,
         print("agent_state: position", agent_state.position, "rotation", agent_state.rotation)
         
     return sim
-
