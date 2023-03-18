@@ -1,4 +1,4 @@
-# ReSEAL: Rethinking SEAL in teh context of ObjectNav
+# ReSEAL: Rethinking SEAL in the context of ObjectNav
 This repository is an implementation of SEAL: Self-supervised Embodied Active Learning using Exploration and 3D Consistency [[arxiv]](https://arxiv.org/abs/2112.01001).
 SEAL is an algorithm to enable embodied agents to explore its environment and improve it perception model in a self-supervised manner.
 Exploration is driven by policy learned with reinforcement learning.
