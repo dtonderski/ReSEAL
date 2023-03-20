@@ -11,7 +11,11 @@ RUN apt-get clean -y
 RUN rm -rf /var/lib/apt/lists/*
 
 # Configure user
-RUN useradd -G sudo -m ${USERNAME}
+RUN useradd -G sudo -m ${USERNAME} && \
+    echo "${USERNAME} ALL=(root) NOPASSWD:ALL" > "/etc/sudoers.d/${USERNAME}" && \
+    chmod 0440 "/etc/sudoers.d/${USERNAME}"
+
+RUN chmod -R 777 /habitat-lab
 
 ENV DEBIAN_FRONTEND=dialog
 ENV SHELL=/bin/bash
