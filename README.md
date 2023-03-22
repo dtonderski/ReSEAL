@@ -20,7 +20,17 @@ Run the following command in `vscode` to build the container and start developin
 ```
 Dev Containers: Rebuild and Reopen in Container
 ```
-
+# Data
+To download the data, run:
+```
+conda activate habitat
+sh tools/get_data.sh
+```
+This will prompt you for your Matterport API token ID and secret API token (the latter will not be shown on screen). After the download is finished, generate example trajectories by running:
+```
+python src/data/generate_trajectories.py
+```
+These will be saved to data/interim/trajectories/train.
 # Repository strucutre
 The repository is structure according to the template in [[link]](https://towardsdatascience.com/structuring-machine-learning-projects-be473775a1b6) and inspired by [[Cookiecutter Data Science]](https://drivendata.github.io/cookiecutter-data-science/)
 
