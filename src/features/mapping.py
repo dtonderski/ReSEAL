@@ -6,8 +6,9 @@ from ..utils.datatypes import SemanticMap3D, CoordinatesMapping, SemanticMap2D, 
 class Geocentric3DMapBuilder:
     def __init__(self, camera_intrinsics, cfg: CfgNode) -> None:
         self._camera_intrinsics = camera_intrinsics
-        self._egocentric_map_shape = cfg.EGOCENTRIC_MAP_SHAPE  # (x, y, z) in pixel
         self._resolution = cfg.RESOLUTION  # cm per pixel
+        self._egocentric_map_shape = cfg.EGOCENTRIC_MAP_SHAPE  # (x, y, z) in pixel
+        self._num_semantic_classes = cfg.NUM_SEMANTIC_CLASSES
         # Initialize geocentric map
         self._geocentric_map = None
         self._origin = None  # Cooordinate in geocentric map of origin in world frame
