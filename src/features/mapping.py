@@ -1,6 +1,15 @@
 from yacs.config import CfgNode
 
-from ..utils.datatypes import SemanticMap3D, CoordinatesMapping, SemanticMap2D, DepthMap, Pose
+from ..utils.datatypes import (
+    Coordinate3D,
+    CoordinatesMapping2Dto3D,
+    CoordinatesMapping3Dto3D,
+    DepthMap,
+    HomogenousTransform,
+    Pose,
+    SemanticMap2D,
+    SemanticMap3D,
+)
 
 
 class Geocentric3DMapBuilder:
@@ -25,21 +34,21 @@ class Geocentric3DMapBuilder:
         self._geocentric_map = self._update_geocentric_map(egocentric_map, ego_to_geo_coord_mapping)
 
     # pylint: disable=invalid-name
-    def _calc_2D_to_3D_coordinate_mapping(self, depth_map: DepthMap, pose: Pose) -> CoordinatesMapping:
+    def _calc_2D_to_3D_coordinate_mapping(self, depth_map: DepthMap, pose: Pose) -> CoordinatesMapping2Dto3D:
         raise NotImplementedError
 
     def _calc_egocentric_map(
-        self, semantic_map: SemanticMap2D, img_to_ego_coord_mapping: CoordinatesMapping
+        self, semantic_map: SemanticMap2D, img_to_ego_coord_mapping: CoordinatesMapping2Dto3D 
     ) -> SemanticMap3D:
         raise NotImplementedError
 
-    def _calc_ego_to_geocentric_coordinate_mapping(self, pose: Pose) -> CoordinatesMapping:
+    def _calc_ego_to_geocentric_coordinate_mapping(self, pose: Pose) -> CoordinatesMapping3Dto3D:
         raise NotImplementedError
 
-    def _reshape_geocentric_map(self, ego_to_geo_coord_mapping: CoordinatesMapping) -> SemanticMap3D:
+    def _reshape_geocentric_map(self, ego_to_geo_coord_mapping: CoordinatesMapping3Dto3D) -> SemanticMap3D:
         raise NotImplementedError
 
     def _update_geocentric_map(
-        self, egocentric_map: SemanticMap3D, ego_to_geo_coord_mapping: CoordinatesMapping
+        self, egocentric_map: SemanticMap3D, ego_to_geo_coord_mapping: CoordinatesMapping3Dto3D
     ) -> SemanticMap3D:
         raise NotImplementedError
