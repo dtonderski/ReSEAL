@@ -1,3 +1,6 @@
+import numpy as np
+import quaternion
+from nptyping import Float, Int, NDArray, Shape
 from yacs.config import CfgNode
 import numpy as np
 from ..utils.geometric_transformations import coordinates_to_grid_indices
@@ -21,8 +24,8 @@ class Geocentric3DMapBuilder:
         self._egocentric_map_origin_offset = cfg.EGOCENTRIC_MAP_ORIGIN_OFFSET  # (x, y, z) in pixels
         self._num_semantic_classes = cfg.NUM_SEMANTIC_CLASSES
         # Initialize geocentric map
-        self._geocentric_map = None
-        self._origin = None  # Cooordinate in geocentric map of origin in world frame
+        self._geocentric_map: SemanticMap3D = None
+        self._world_origin_in_geo: Coordinate3D = None  # Cooordinate in geocentric map of origin in world frame
 
     @property
     def map(self):
@@ -56,7 +59,29 @@ class Geocentric3DMapBuilder:
         return egocentric_3d_semantic_map
 
     def _calc_ego_to_geocentric_coordinate_mapping(self, pose: Pose) -> CoordinatesMapping3Dto3D:
-        raise NotImplementedError
+        """
+        Returns a list of tuples of 
+            - coordinates in the egocentric map 
+            - corresponding coordinates in the geocentric map
+        """
+        # get list of coordinates in ego frame
+        egocentric_map_coords = self._get_egocentric_map_coords()
+        # Calculate homogenous matrix for transforming ego frame to world frame
+        ego_to_world_homo_matrix = calc_homogenous_transform_from_pose(pose)
+        # transform coords from egocentric to world frame
+        egocentric_map_coords = np.vstack((egocentric_map_coords, np.ones(egocentric_map_coords.shape[1])))
+        world_frame_coords = np.matmul(ego_to_world_homo_matrix, egocentric_map_coords)
+        # transfrom coords from world frame to geocentric map
+        world_to_geo_homo_matrix = calc_homogenous_transform_from_translation(self._world_origin_in_geo)
+        geocentric_map_coords = np.matmul(world_to_geo_homo_matrix, world_frame_coords)[:3, :]
+        geocentric_map_coords = np.round(geocentric_map_coords).astype(int)
+        return [
+            (egocentric_map_coords[:, i], geocentric_map_coords[:, i]) for i in range(geocentric_map_coords.shape[1])
+        ]
+
+    def _get_egocentric_map_coords(self) -> NDArray[Shape["3, NumCoords"], Int]:
+        """Returns a list of every coordinate in the egocentric map"""
+        return np.indices(self._egocentric_map_shape).reshape(3, -1)
 
     def _reshape_geocentric_map(self, ego_to_geo_coord_mapping: CoordinatesMapping3Dto3D) -> SemanticMap3D:
         raise NotImplementedError
@@ -65,3 +90,20 @@ class Geocentric3DMapBuilder:
         self, egocentric_map: SemanticMap3D, ego_to_geo_coord_mapping: CoordinatesMapping3Dto3D
     ) -> SemanticMap3D:
         raise NotImplementedError
+
+
+def calc_homogenous_transform_from_pose(pose: Pose) -> HomogenousTransform:
+    """Returns a 4x4 homogenous matrix from a pose consisting of a translation vector and a rotation quaternion"""
+    translation_vector, rotation_quaternion = pose
+    rotation_matrix = quaternion.as_rotation_matrix(rotation_quaternion)
+    homogenous_matrix = np.eye(4)
+    homogenous_matrix[:3, :3] = rotation_matrix
+    homogenous_matrix[:3, 3] = translation_vector
+    return homogenous_matrix
+
+
+def calc_homogenous_transform_from_translation(translation: Coordinate3D) -> HomogenousTransform:
+    """Returns a 4x4 homogenous matrix from a translation vector"""
+    homogenous_matrix = np.eye(4)
+    homogenous_matrix[:3, 3] = translation
+    return homogenous_matrix
