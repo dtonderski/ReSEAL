@@ -19,7 +19,8 @@ def calculate_vertices(xmin=0, ymin=0, zmin=0, xmax=None, ymax=None, zmax=None):
         "k": [0, 7, 2, 3, 6, 7, 1, 6, 5, 5, 7, 2],
     }
 
-def draw_cube(vertices, color = "gold", opacity = 0.5, name = "cube", colors_shown_in_legend = None):
+def draw_cube(vertices, color = "gold", opacity = 0.5, name = "cube", colors_shown_in_legend = None,
+              legendrank = 0):
     colors_shown_in_legend = set() if colors_shown_in_legend is None else colors_shown_in_legend
     if color in colors_shown_in_legend:
         showlegend = False
@@ -42,7 +43,8 @@ def draw_cube(vertices, color = "gold", opacity = 0.5, name = "cube", colors_sho
             opacity = opacity,
             name=name,
             showlegend=showlegend,
-            legendgroup = color
+            legendgroup = color,
+            legendrank = legendrank
         )
     ])
     return fig, colors_shown_in_legend
@@ -63,6 +65,7 @@ def draw_voxels(semantic_3d_map: SemanticMap3D, cfg: CfgNode, colorscale: str = 
         vertices = calculate_vertices(x,y,z)
         cube, colors_shown_in_legend = draw_cube(vertices, color = colors[semantic_classes_of_occupied_voxels[i]],
                                                 opacity = 0.5, name = str(semantic_classes_of_occupied_voxels[i]),
-                                                colors_shown_in_legend=colors_shown_in_legend)
+                                                colors_shown_in_legend=colors_shown_in_legend, 
+                                                legendrank = semantic_classes_of_occupied_voxels[i])
         cubes.append(cube)
     return cubes
