@@ -1,7 +1,7 @@
 pylint==2.14.0
 black==22.10.0
 isort==5.10.1
-# ipykernel, plotly, and nbformat are needed for visualisation of 3d maps in notebooks
-ipykernel==6.16.2
-plotly==5.13.1 
-nbformat==5.8.0
+# mypy required for type checking compatible with nptyping
+mypy==1.1.1
+# required for mypy to work with pillow
+types-Pillow=9.4.0.17
