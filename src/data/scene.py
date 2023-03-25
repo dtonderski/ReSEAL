@@ -45,8 +45,8 @@ def make_cfg(settings):
     return habitat_sim.Configuration(sim_cfg, [agent_cfg])
 
 
-def initialize_scene(scene:str, 
-                     scene_dataset:str="data/raw/train/scene_datasets/hm3d/hm3d_basis.scene_dataset_config.json", 
+def initialize_scene(scene:str,
+                     scene_dataset:str="data/raw/train/scene_datasets/hm3d/hm3d_basis.scene_dataset_config.json",
                      verbose:bool=False):
     rgb_sensor = True  # @param {type:"boolean"}
     depth_sensor = True  # @param {type:"boolean"}
@@ -65,11 +65,6 @@ def initialize_scene(scene:str,
     }
 
     cfg = make_cfg(sim_settings)
-
-    try:  # Got to make initialization idiot proof
-        sim.close()
-    except NameError:
-        pass
     sim = habitat_sim.Simulator(cfg)
 
     # Set agent state
@@ -82,5 +77,5 @@ def initialize_scene(scene:str,
     agent_state = agent.get_state()
     if verbose:
         print("agent_state: position", agent_state.position, "rotation", agent_state.rotation)
-        
+
     return sim

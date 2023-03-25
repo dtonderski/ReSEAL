@@ -1,14 +1,15 @@
 import json
 import os
 import pathlib
-from src.data import scene
 from PIL import Image
 import numpy as np
-
+import quaternion # type: ignore # pylint: disable=unused-import
+from habitat_sim.simulator import ObservationDict
+from src.data import scene
 
 if __name__ == '__main__':
 
-    with open('config/trajectories.json', 'r') as f:
+    with open('config/trajectories.json', 'r', encoding="utf-8") as f:
         json_dict = json.load(f)
 
     base_destination_dir = 'data/interim/trajectories/train'
@@ -27,10 +28,10 @@ if __name__ == '__main__':
         current_frame = 0
 
         max_frames = len(actions)
-        observations = sim.step('move_forward')
+        observations: ObservationDict = sim.step('move_forward')
         
         positions = np.empty((max_frames, 3), dtype=np.float64)
-        rotations = np.empty((max_frames), dtype=np.quaternion)
+        rotations = np.empty((max_frames), dtype=np.quaternion) # type: ignore[attr-defined]
 
         while current_frame < max_frames:
             try:
