@@ -1,2 +1,6 @@
 fire==0.5.0
 nptyping==2.5.0
+# nptyping 2.5.0 needs numpy 1.21.5
+numpy == 1.21.5
+# numba 0.54.1 needs numpy<1.21, so upgrade numba to 0.55 (should be safe as there are no depreciations)
+numba==0.55.2

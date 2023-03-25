@@ -1,3 +1,7 @@
 pylint==2.14.0
 black==22.10.0
 isort==5.10.1
+# ipykernel, plotly, and nbformat are needed for visualisation of 3d maps in notebooks
+ipykernel==6.16.2
+plotly==5.13.1 
+nbformat==5.8.0
