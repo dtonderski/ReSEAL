@@ -65,7 +65,7 @@ def draw_voxels(semantic_3d_map: SemanticMap3D, cfg: CfgNode, colorscale: str = 
         vertices = calculate_vertices(x,y,z)
         cube, colors_shown_in_legend = draw_cube(vertices, color = colors[semantic_classes_of_occupied_voxels[i]],
                                                 opacity = 0.5, name = str(semantic_classes_of_occupied_voxels[i]),
-                                                colors_shown_in_legend=colors_shown_in_legend, 
+                                                colors_shown_in_legend=colors_shown_in_legend,
                                                 legendrank = semantic_classes_of_occupied_voxels[i])
         cubes.append(cube)
     return cubes
