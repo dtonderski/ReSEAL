@@ -1,11 +1,10 @@
 from PIL import Image
 import numpy as np
 from matplotlib import pyplot as plt
+from habitat_sim.utils.common import d3_40_colors_rgb
 
 # Change to do something like this maybe: https://stackoverflow.com/a/41432704
 def display_sample(rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])):
-    from habitat_sim.utils.common import d3_40_colors_rgb
-
     rgb_img = Image.fromarray(rgb_obs, mode="RGBA")
 
     arr = [rgb_img]
@@ -25,8 +24,8 @@ def display_sample(rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])):
 
     plt.figure(figsize=(12, 8))
     for i, data in enumerate(arr):
-        ax = plt.subplot(1, 3, i + 1)
-        ax.axis("off")
-        ax.set_title(titles[i])
+        axes = plt.subplot(1, 3, i + 1)
+        axes.axis("off")
+        axes.set_title(titles[i])
         plt.imshow(data)
     plt.show(block=False)
