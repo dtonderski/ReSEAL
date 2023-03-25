@@ -1,13 +1,24 @@
 from yacs.config import CfgNode
-
-from ..utils.datatypes import SemanticMap3D, CoordinatesMapping, SemanticMap2D, DepthMap, Pose
+import numpy as np
+from ..utils.geometric_transformations import coordinates_to_grid_indices
+from ..utils.datatypes import (
+    Coordinate3D,
+    CoordinatesMapping2Dto3D,
+    CoordinatesMapping3Dto3D,
+    DepthMap,
+    HomogenousTransform,
+    Pose,
+    SemanticMap2D,
+    SemanticMap3D,
+)
 
 
 class Geocentric3DMapBuilder:
     def __init__(self, camera_intrinsics, cfg: CfgNode) -> None:
         self._camera_intrinsics = camera_intrinsics
         self._resolution = cfg.RESOLUTION  # cm per pixel
-        self._egocentric_map_shape = cfg.EGOCENTRIC_MAP_SHAPE  # (x, y, z) in pixel
+        self._egocentric_map_shape = cfg.EGOCENTRIC_MAP_SHAPE  # (x, y, z) in pixels
+        self._egocentric_map_origin_offset = cfg.EGOCENTRIC_MAP_ORIGIN_OFFSET  # (x, y, z) in pixels
         self._num_semantic_classes = cfg.NUM_SEMANTIC_CLASSES
         # Initialize geocentric map
         self._geocentric_map = None
@@ -25,21 +36,32 @@ class Geocentric3DMapBuilder:
         self._geocentric_map = self._update_geocentric_map(egocentric_map, ego_to_geo_coord_mapping)
 
     # pylint: disable=invalid-name
-    def _calc_2D_to_3D_coordinate_mapping(self, depth_map: DepthMap, pose: Pose) -> CoordinatesMapping:
+    def _calc_2D_to_3D_coordinate_mapping(self, depth_map: DepthMap, pose: Pose) -> CoordinatesMapping2Dto3D:
         raise NotImplementedError
 
-    def _calc_egocentric_map(
-        self, semantic_map: SemanticMap2D, img_to_ego_coord_mapping: CoordinatesMapping
-    ) -> SemanticMap3D:
+    def _calc_egocentric_map(self, semantic_map: SemanticMap2D,
+                             img_to_ego_coord_mapping: CoordinatesMapping2Dto3D,) -> SemanticMap3D:
+        coords_2d = np.array([x[0] for x in img_to_ego_coord_mapping])
+        coords_3d = np.array([x[1] for x in img_to_ego_coord_mapping])
+
+        grid_indices = coordinates_to_grid_indices(coords_3d, self._egocentric_map_origin_offset, self._resolution)
+
+        egocentric_3d_semantic_map = np.zeros(shape = self._egocentric_map_shape + (self._num_semantic_classes+1, ),
+                                              dtype = np.float32)
+
+        egocentric_3d_semantic_map[grid_indices[:,0], grid_indices[:,1], grid_indices[:,2], 0] = 1
+        egocentric_3d_semantic_map[grid_indices[:,0], grid_indices[:,1], grid_indices[:,2], 1:] = (
+            semantic_map[coords_2d[:,0], coords_2d[:,1]])
+
+        return egocentric_3d_semantic_map
+
+    def _calc_ego_to_geocentric_coordinate_mapping(self, pose: Pose) -> CoordinatesMapping3Dto3D:
         raise NotImplementedError
 
-    def _calc_ego_to_geocentric_coordinate_mapping(self, pose: Pose) -> CoordinatesMapping:
-        raise NotImplementedError
-
-    def _reshape_geocentric_map(self, ego_to_geo_coord_mapping: CoordinatesMapping) -> SemanticMap3D:
+    def _reshape_geocentric_map(self, ego_to_geo_coord_mapping: CoordinatesMapping3Dto3D) -> SemanticMap3D:
         raise NotImplementedError
 
     def _update_geocentric_map(
-        self, egocentric_map: SemanticMap3D, ego_to_geo_coord_mapping: CoordinatesMapping
+        self, egocentric_map: SemanticMap3D, ego_to_geo_coord_mapping: CoordinatesMapping3Dto3D
     ) -> SemanticMap3D:
         raise NotImplementedError
