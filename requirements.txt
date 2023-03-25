@@ -2,7 +2,7 @@ fire==0.5.0
 # Fire requires termcolor
 termcolor==2.2.0
 nptyping==2.5.0
-# nptyping== requires numpy==1.21.5
+# nptyping==2.5.0 requires numpy==1.21.5
 numpy==1.21.5
 # numba 0.54.0 requires numpy<1.21, so need to upgrade numba and llvmlite
 numba==0.55.2
