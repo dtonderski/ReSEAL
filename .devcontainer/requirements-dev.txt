@@ -1,3 +1,7 @@
 pylint==2.14.0
 black==22.10.0
 isort==5.10.1
+# mypy required for type checking compatible with nptyping
+mypy==1.1.1
+# required for mypy to work with pillow
+types-Pillow==9.4.0.17
