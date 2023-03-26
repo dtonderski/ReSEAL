@@ -1,11 +1,10 @@
-import pytest
 import numpy as np
+import pytest
 import quaternion
 from yacs.config import CfgNode
-from nptyping import NDArray, Int, Shape
 
-from src.utils.datatypes import Pose, Coordinate3D, CoordinatesMapping3Dto3D
 from src.features.mapping import Geocentric3DMapBuilder
+from src.utils.datatypes import Coordinate3D, CoordinatesMapping3Dto3D, Pose
 
 
 class TestGeocentric3DMapBuilder:
@@ -16,6 +15,16 @@ class TestGeocentric3DMapBuilder:
         for ego_coord, expected_geo_coord in expected_ego_to_geo_coord_mapping.items():
             geo_coord = ego_to_geo_coord_mapping[ego_coord]
             np.testing.assert_array_equal(geo_coord, expected_geo_coord)
+
+    def test_reshape_geocentric_map(
+        self, geocentric_3d_map_builder, pose, expected_ego_to_geo_coord_mapping_after_reshaping
+    ):
+        ego_to_geo_coord_mapping = geocentric_3d_map_builder._calc_ego_to_geocentric_coordinate_mapping(pose)
+        ego_to_geo_coord_mapping = geocentric_3d_map_builder._reshape_geocentric_map(ego_to_geo_coord_mapping)
+        for ego_coord, expected_geo_coord in expected_ego_to_geo_coord_mapping_after_reshaping.items():
+            geo_coord = ego_to_geo_coord_mapping[ego_coord]
+            np.testing.assert_array_equal(geo_coord, expected_geo_coord)
+        assert geocentric_3d_map_builder._world_origin_in_geo == (3, 1, 0)
 
 
 @pytest.fixture
@@ -60,4 +69,19 @@ def expected_ego_to_geo_coord_mapping() -> CoordinatesMapping3Dto3D:
         (2, 0, 0): (1, 4, 0),
         (2, 1, 0): (0, 4, 0),
         (2, 2, 0): (-1, 4, 0),
+    }
+
+
+@pytest.fixture
+def expected_ego_to_geo_coord_mapping_after_reshaping() -> CoordinatesMapping3Dto3D:
+    return {
+        (0, 0, 0): (2, 2, 0),
+        (0, 1, 0): (1, 2, 0),
+        (0, 2, 0): (0, 2, 0),
+        (1, 0, 0): (2, 3, 0),
+        (1, 1, 0): (1, 3, 0),
+        (1, 2, 0): (0, 3, 0),
+        (2, 0, 0): (2, 4, 0),
+        (2, 1, 0): (1, 4, 0),
+        (2, 2, 0): (0, 4, 0),
     }

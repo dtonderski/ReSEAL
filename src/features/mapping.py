@@ -86,11 +86,11 @@ class Geocentric3DMapBuilder:
 
     def _reshape_geocentric_map(self, ego_to_geo_coord_mapping: CoordinatesMapping3Dto3D) -> CoordinatesMapping3Dto3D:
         """Reshapes the geocentric map to fit the new coordinates, and returns the new mapping in reshaped map"""
-        coords_ego = [coord for coord, _ in ego_to_geo_coord_mapping]
-        coords_geo: NDArray[Shape["NumCoords, 3"], Int] = np.array([coord for _, coord in ego_to_geo_coord_mapping])
+        egocentric_map_coords = [coord for coord in ego_to_geo_coord_mapping]
+        geocentric_map_coord = np.array([coord for coord in ego_to_geo_coord_mapping.values()])
         # Find edges of coords in mapping
-        min_coords = np.min(coords_geo, axis=0)
-        max_coords = np.max(coords_geo, axis=0)
+        min_coords = np.min(geocentric_map_coord, axis=0)
+        max_coords = np.max(geocentric_map_coord, axis=0)
         # Pad geocentric map to fit new coords
         pad_width = [[0, 0], [0, 0], [0, 0]]
         for dim in range(3):
@@ -100,12 +100,14 @@ class Geocentric3DMapBuilder:
                 pad_width[dim][1] = max_coords[dim] - self._geocentric_map.shape[dim] + 1
         self._geocentric_map = np.pad(self._geocentric_map, pad_width, mode="constant", constant_values=0)
         # Update world origin in geocentric map
-        for dim in range(3):
-            self._world_origin_in_geo[dim] += pad_width[dim][0]
+        self._world_origin_in_geo = tuple([self._world_origin_in_geo[dim] + pad_width[dim][0] for dim in range(3)])
         # Update mapping
         for dim in range(3):
-            coords_geo[:, dim] += pad_width[dim][0]
-        return [(coords_ego[i], coords_geo[i]) for i in range(len(coords_ego))]
+            geocentric_map_coord[:, dim] += pad_width[dim][0]
+        return {
+            tuple(egocentric_map_coords[i]): tuple(geocentric_map_coord[i, :])
+            for i in range(len(egocentric_map_coords))
+        }
 
     def _update_geocentric_map(
         self, egocentric_map: SemanticMap3D, ego_to_geo_coord_mapping: CoordinatesMapping3Dto3D
