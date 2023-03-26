@@ -92,7 +92,7 @@ class Geocentric3DMapBuilder:
         min_coords = np.min(geocentric_map_coord, axis=0)
         max_coords = np.max(geocentric_map_coord, axis=0)
         # Pad geocentric map to fit new coords
-        pad_width = [[0, 0], [0, 0], [0, 0]]
+        pad_width = [[0, 0], [0, 0], [0, 0], [0, 0]]
         for dim in range(3):
             if min_coords[dim] < 0:
                 pad_width[dim][0] = -min_coords[dim]
@@ -112,7 +112,8 @@ class Geocentric3DMapBuilder:
     def _update_geocentric_map(
         self, egocentric_map: SemanticMap3D, ego_to_geo_coord_mapping: CoordinatesMapping3Dto3D
     ) -> SemanticMap3D:
-        raise NotImplementedError
+        for egocentric_coord, geocentric_coord in ego_to_geo_coord_mapping.items():
+            self._geocentric_map[geocentric_coord] = egocentric_map[egocentric_coord]
 
 
 def calc_homogenous_transform_from_pose(pose: Pose) -> HomogenousTransform:
