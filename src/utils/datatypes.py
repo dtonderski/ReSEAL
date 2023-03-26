@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Mapping
 from nptyping import Shape, NDArray, Float
 import numpy as np
 import quaternion # pylint: disable=unused-import
@@ -8,7 +8,7 @@ SemanticMap3D = NDArray[Shape["NumPixelsX, NumPixelsY, NumPixelsZ, NumChannels"]
 Coordinate2D = Tuple[int, int]
 Coordinate3D = Tuple[int, int, int]
 CoordinatesMapping2Dto3D = List[Tuple[Coordinate2D, Coordinate3D]]
-CoordinatesMapping3Dto3D = List[Tuple[Coordinate3D, Coordinate3D]]
+CoordinatesMapping3Dto3D = List[Mapping[Coordinate3D, Coordinate3D]]
 
 SemanticMap2D = NDArray[Shape["Height, Width, NumChannels"], Float]
 DepthMap = NDArray[Shape["Height, Width"], Float]

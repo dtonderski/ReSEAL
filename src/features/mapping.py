@@ -24,8 +24,8 @@ class Geocentric3DMapBuilder:
         self._egocentric_map_origin_offset = cfg.EGOCENTRIC_MAP_ORIGIN_OFFSET  # (x, y, z) in pixels
         self._num_semantic_classes = cfg.NUM_SEMANTIC_CLASSES
         # Initialize geocentric map
-        self._geocentric_map: SemanticMap3D = None
-        self._world_origin_in_geo: Coordinate3D = None  # Cooordinate in geocentric map of origin in world frame
+        self._geocentric_map: SemanticMap3D = np.zeros((1, 1, 1))
+        self._world_origin_in_geo: Coordinate3D = (0, 0, 0)  # Cooordinate in geocentric map of origin in world frame
 
     @property
     def map(self):
@@ -35,8 +35,8 @@ class Geocentric3DMapBuilder:
         img_to_ego_coord_mapping = self._calc_2D_to_3D_coordinate_mapping(depth_map, pose)
         egocentric_map = self._calc_egocentric_map(semantic_map, img_to_ego_coord_mapping)
         ego_to_geo_coord_mapping = self._calc_ego_to_geocentric_coordinate_mapping(pose)
-        self._geocentric_map = self._reshape_geocentric_map(ego_to_geo_coord_mapping)
-        self._geocentric_map = self._update_geocentric_map(egocentric_map, ego_to_geo_coord_mapping)
+        ego_to_geo_coord_mapping = self._reshape_geocentric_map(ego_to_geo_coord_mapping)
+        self._update_geocentric_map(egocentric_map, ego_to_geo_coord_mapping)
 
     # pylint: disable=invalid-name
     def _calc_2D_to_3D_coordinate_mapping(self, depth_map: DepthMap, pose: Pose) -> CoordinatesMapping2Dto3D:
@@ -60,8 +60,8 @@ class Geocentric3DMapBuilder:
 
     def _calc_ego_to_geocentric_coordinate_mapping(self, pose: Pose) -> CoordinatesMapping3Dto3D:
         """
-        Returns a list of tuples of 
-            - coordinates in the egocentric map 
+        Returns a list of tuples of
+            - coordinates in the egocentric map
             - corresponding coordinates in the geocentric map
         """
         # get list of coordinates in ego frame
@@ -69,22 +69,43 @@ class Geocentric3DMapBuilder:
         # Calculate homogenous matrix for transforming ego frame to world frame
         ego_to_world_homo_matrix = calc_homogenous_transform_from_pose(pose)
         # transform coords from egocentric to world frame
-        egocentric_map_coords = np.vstack((egocentric_map_coords, np.ones(egocentric_map_coords.shape[1])))
-        world_frame_coords = np.matmul(ego_to_world_homo_matrix, egocentric_map_coords)
+        egocentric_homo_coords = np.vstack((egocentric_map_coords, np.ones(egocentric_map_coords.shape[1])))
+        world_homo_coords = np.matmul(ego_to_world_homo_matrix, egocentric_homo_coords)
         # transfrom coords from world frame to geocentric map
         world_to_geo_homo_matrix = calc_homogenous_transform_from_translation(self._world_origin_in_geo)
-        geocentric_map_coords = np.matmul(world_to_geo_homo_matrix, world_frame_coords)[:3, :]
+        geocentric_map_coords = np.matmul(world_to_geo_homo_matrix, world_homo_coords)[:3, :]
         geocentric_map_coords = np.round(geocentric_map_coords).astype(int)
-        return [
-            (egocentric_map_coords[:, i], geocentric_map_coords[:, i]) for i in range(geocentric_map_coords.shape[1])
-        ]
+        return {
+            tuple(egocentric_map_coords[:, i]): tuple(geocentric_map_coords[:, i])
+            for i in range(geocentric_map_coords.shape[1])
+        }
 
     def _get_egocentric_map_coords(self) -> NDArray[Shape["3, NumCoords"], Int]:
         """Returns a list of every coordinate in the egocentric map"""
         return np.indices(self._egocentric_map_shape).reshape(3, -1)
 
-    def _reshape_geocentric_map(self, ego_to_geo_coord_mapping: CoordinatesMapping3Dto3D) -> SemanticMap3D:
-        raise NotImplementedError
+    def _reshape_geocentric_map(self, ego_to_geo_coord_mapping: CoordinatesMapping3Dto3D) -> CoordinatesMapping3Dto3D:
+        """Reshapes the geocentric map to fit the new coordinates, and returns the new mapping in reshaped map"""
+        coords_ego = [coord for coord, _ in ego_to_geo_coord_mapping]
+        coords_geo: NDArray[Shape["NumCoords, 3"], Int] = np.array([coord for _, coord in ego_to_geo_coord_mapping])
+        # Find edges of coords in mapping
+        min_coords = np.min(coords_geo, axis=0)
+        max_coords = np.max(coords_geo, axis=0)
+        # Pad geocentric map to fit new coords
+        pad_width = [[0, 0], [0, 0], [0, 0]]
+        for dim in range(3):
+            if min_coords[dim] < 0:
+                pad_width[dim][0] = -min_coords[dim]
+            if max_coords[dim] >= self._geocentric_map.shape[dim]:
+                pad_width[dim][1] = max_coords[dim] - self._geocentric_map.shape[dim] + 1
+        self._geocentric_map = np.pad(self._geocentric_map, pad_width, mode="constant", constant_values=0)
+        # Update world origin in geocentric map
+        for dim in range(3):
+            self._world_origin_in_geo[dim] += pad_width[dim][0]
+        # Update mapping
+        for dim in range(3):
+            coords_geo[:, dim] += pad_width[dim][0]
+        return [(coords_ego[i], coords_geo[i]) for i in range(len(coords_ego))]
 
     def _update_geocentric_map(
         self, egocentric_map: SemanticMap3D, ego_to_geo_coord_mapping: CoordinatesMapping3Dto3D
