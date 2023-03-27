@@ -44,8 +44,8 @@ class Geocentric3DMapBuilder:
 
     def _calc_egocentric_map(self, semantic_map: SemanticMap2D,
                              img_to_ego_coord_mapping: CoordinatesMapping2Dto3D,) -> SemanticMap3D:
-        coords_2d = np.array([x for x in img_to_ego_coord_mapping.keys()])
-        coords_3d = np.array([x for x in img_to_ego_coord_mapping.values()])
+        coords_2d = np.array(list(img_to_ego_coord_mapping.keys()))
+        coords_3d = np.array(list(img_to_ego_coord_mapping.values()))
 
         grid_indices = coordinates_to_grid_indices(coords_3d, self._egocentric_map_origin_offset, self._resolution)
 
