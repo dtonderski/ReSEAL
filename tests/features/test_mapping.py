@@ -40,6 +40,7 @@ def map_builder_cfg() -> CfgNode:
     cfg.RESOLUTION = 1
     cfg.EGOCENTRIC_MAP_SHAPE = (3, 3, 3)
     cfg.NUM_SEMANTIC_CLASSES = 1
+    cfg.EGOCENTRIC_MAP_ORIGIN_OFFSET = (0, 0, 0)
     return cfg
 
 
