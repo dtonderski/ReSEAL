@@ -49,7 +49,7 @@ def draw_cube(vertices, color = "gold", opacity = 0.5, name = "cube", colors_sho
     ])
     return fig, colors_shown_in_legend
 
-def draw_voxels(semantic_3d_map: SemanticMap3D, cfg: CfgNode, colorscale: str = "viridis"):
+def draw_voxels(semantic_3d_map: SemanticMap3D, cfg: CfgNode, colorscale: str = "viridis", return_colors = False):
     indices_of_occupied_voxels = np.array(np.where(semantic_3d_map[:,:,:,0])).transpose()
     semantic_classes_of_occupied_voxels = np.argmax(
         semantic_3d_map[np.where(semantic_3d_map[:,:,:,0])][:,1:], axis=1)
@@ -68,4 +68,7 @@ def draw_voxels(semantic_3d_map: SemanticMap3D, cfg: CfgNode, colorscale: str = 
                                                 colors_shown_in_legend=colors_shown_in_legend,
                                                 legendrank = semantic_classes_of_occupied_voxels[i])
         cubes.append(cube)
+
+    if return_colors:
+        return cubes, colors
     return cubes
