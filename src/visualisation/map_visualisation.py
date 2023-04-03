@@ -1,10 +1,9 @@
-
 import plotly.graph_objects as go
 import plotly.express as px
 import numpy as np
 from yacs.config import CfgNode
 from ..utils.geometric_transformations import grid_indices_to_world_coordinates
-from ..utils.datatypes import SemanticMap3D
+from ..utils.datatypes import SemanticMap3D, GridIndex3D
 
 def calculate_vertices(xmin=0, ymin=0, zmin=0, xmax=None, ymax=None, zmax=None):
     xmax = xmin + 1 if xmax is None else xmax
@@ -49,7 +48,8 @@ def draw_cube(vertices, color = "gold", opacity = 0.5, name = "cube", colors_sho
     ])
     return fig, colors_shown_in_legend
 
-def draw_voxels(semantic_3d_map: SemanticMap3D, cfg: CfgNode, colorscale: str = "viridis", return_colors = False):
+def draw_voxels(semantic_3d_map: SemanticMap3D, grid_indices_of_origin: GridIndex3D,
+                cfg: CfgNode, colorscale: str = "viridis", return_colors = False):
     indices_of_occupied_voxels = np.array(np.where(semantic_3d_map[:,:,:,0])).transpose()
     semantic_classes_of_occupied_voxels = np.argmax(
         semantic_3d_map[np.where(semantic_3d_map[:,:,:,0])][:,1:], axis=1)
@@ -58,7 +58,7 @@ def draw_voxels(semantic_3d_map: SemanticMap3D, cfg: CfgNode, colorscale: str = 
     colors = px.colors.sample_colorscale(colorscale,
                                         [n/(cfg.NUM_SEMANTIC_CLASSES -1) for n in range(cfg.NUM_SEMANTIC_CLASSES)])
     occupied_voxel_coordinates = grid_indices_to_world_coordinates(indices_of_occupied_voxels,
-                                                                   cfg.EGOCENTRIC_MAP_ORIGIN_OFFSET,
+                                                                   grid_indices_of_origin,
                                                                    cfg.RESOLUTION)
 
     for i, (x,y,z) in enumerate(occupied_voxel_coordinates): # pylint: disable=invalid-name
