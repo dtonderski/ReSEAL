@@ -9,6 +9,8 @@ Coordinate2D = Tuple[int, int]
 Coordinate3D = Tuple[int, int, int]
 CoordinatesMapping2Dto3D = Mapping[Coordinate2D, Coordinate3D]
 CoordinatesMapping3Dto3D = Mapping[Coordinate3D, Coordinate3D]
+GridIndex2D = Tuple[int, int, int]
+GridIndex3D = Tuple[int, int, int]
 
 SemanticMap2D = NDArray[Shape["Height, Width, NumChannels"], Float]
 DepthMap = NDArray[Shape["Height, Width"], Float]
