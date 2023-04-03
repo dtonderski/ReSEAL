@@ -2,37 +2,91 @@ from typing import Dict, List, Tuple, Union
 import numpy as np
 from yacs.config import CfgNode
 from nptyping import NDArray, Shape, Float, Int
-from ..utils.datatypes import SemanticMap3D
+from ..utils.datatypes import SemanticMap3D, Coordinate3D, GridIndex3D
+from ..utils.geometric_transformations import coordinates_to_grid_indices
 
+def get_ray_origin_coords_and_indices(ray_origin_coords: Union[Coordinate3D, NDArray[Shape["NRays, 3"], Float]],
+                                      grid_index_of_origin: GridIndex3D,
+                                      sgnsincos: NDArray[Shape["NRays"], Float],    # type: ignore[name-defined]
+                                      sgnsinsin: NDArray[Shape["NRays"], Float],    # type: ignore[name-defined]
+                                      sgncos: NDArray[Shape["NRays"], Float],       # type: ignore[name-defined]
+                                      cfg: CfgNode):
+    """ Builds the arrays containing the coordinates and grid indices of the origin of each ray.
+
+    Args:
+        ray_origin_coords (Union[Coordinate3D, NDArray[Shape["NRays, 3"], Float]]): either a tuple containing the \
+            coordinates of the origin of all rays, or an array of shape (NRays, 3) containing the coordinates of the \
+            origin of each ray.
+        grid_index_of_origin (GridIndex3D): grid index of the origin of the scene.
+        sgnsincos (NDArray[Shape["NRays"]]): sgn(sin(theta)cos(phi)) for each ray (x-direction).
+        sgnsinsin (NDArray[Shape["NRays"]]): sgn(sin(theta)sin(phi)) for each ray (y-direction).
+        sgncos (NDArray[Shape["NRays"]]): sgn(cos(theta)) for each ray (z-direction).
+        cfg (CfgNode): configuration of the current scene.
+
+    Returns:
+        x_arr (NDArray[Shape["NRays"], Float]): x-coordinates of the origin of each ray.
+        y_arr (NDArray[Shape["NRays"], Float]): y-coordinates of the origin of each ray.
+        z_arr (NDArray[Shape["NRays"], Float]): z-coordinates of the origin of each ray.
+        i_arr (NDArray[Shape["NRays"], Int]): i-indices of the origin of each ray.
+        j_arr (NDArray[Shape["NRays"], Int]): j-indices of the origin of each ray.
+        k_arr (NDArray[Shape["NRays"], Int]): k-indices of the origin of each ray.
+    """
+
+    if isinstance(ray_origin_coords, tuple):
+        ray_origin_coords_array = np.zeros((sgnsincos.size, 3))
+        ray_origin_coords_array[:,0] = ray_origin_coords[0]
+        ray_origin_coords_array[:,1] = ray_origin_coords[1]
+        ray_origin_coords_array[:,2] = ray_origin_coords[2]
+    else:
+        ray_origin_coords_array = ray_origin_coords
+
+    x_arr = ray_origin_coords_array[:,0]
+    y_arr = ray_origin_coords_array[:,1]
+    z_arr = ray_origin_coords_array[:,2]
+
+    ray_origin_indices = coordinates_to_grid_indices(ray_origin_coords_array, grid_index_of_origin, cfg.RESOLUTION)
+
+    i_arr = ray_origin_indices[:,0]
+    j_arr = ray_origin_indices[:,1]
+    k_arr = ray_origin_indices[:,2]
+
+    # If the ray goes backwards in a given dimension, we need to offset the starting grid index by 1
+    i_arr -= (sgnsincos<0).astype(int)
+    j_arr -= (sgnsinsin<0).astype(int)
+    k_arr -= (sgncos<0).astype(int)
+
+    return x_arr, y_arr, z_arr, i_arr, j_arr, k_arr
 
 def raytrace_3d(theta: NDArray[Shape["NRays"], Float],                          # type: ignore[name-defined]
                 phi: NDArray[Shape["NRays"], Float],                            # type: ignore[name-defined]
                 semantic_map_3d: SemanticMap3D,
+                ray_origin_coords: Union[Coordinate3D, NDArray[Shape["NRays, 3"], Float]],
+                grid_index_of_origin: GridIndex3D,
                 cfg: CfgNode,
                 return_intersections = False) \
                 -> Union[                                                       # type: ignore[name-defined]
                     Tuple[NDArray[Shape["NRays"], Int],
                           Dict[int, List[Tuple[float, float, float]]]],
                     NDArray[Shape["NRays"], Int]]:
-    """_summary_
+    """Traces rays through a 3D semantic map until they hit a voxel, and returns the class of the voxel they hit.
 
     Args:
-        theta (NDArray[Shape["*"]): flat array of theta angles of rays.
-        phi (NDArray[Shape["*"]): flat array of phi angles of rays.
+        theta (NDArray[Shape["NRays"], Float]): flat array of theta angles of rays.
+        phi (NDArray[Shape["NRays"], Float]): flat array of phi angles of rays.
         semantic_map_3d (SemanticMap3D): semantic map of the scene in which to raytrace.
-        cfg (CfgNode): config of the current scene.
+        ray_origin_coords (Union[Coordinate3D, NDArray[Shape["NRays, 3"], Float]]): either a tuple containing the \
+            coordinates of the origin of all rays, or an array of shape (NRays, 3) containing the coordinates of the \
+            origin of each ray.
+        grid_index_of_origin (GridIndex3D): grid index of the origin of the scene.
+        cfg (CfgNode): configuration of the current scene.
         return_intersections (bool, optional): determines whether to return intersections. Defaults to False.
 
     Returns:
-        ray_classes (NDArray[Shape[NRays], Int]): The class of each ray, equal to the class of the first voxel it hits
-                                                  or -1 if it doesn't hit anything
-        intersections (Dict[int, List[Tuple[float, float, float]]], optional): dictionary mapping from ray index to
-                                                                               list of intersections
+        ray_classes (NDArray[Shape[NRays], Int]): The class of each ray, equal to the class of the first voxel it hits \
+                                                  or -1 if it doesn't hit anything.
+        intersections (Dict[int, List[Tuple[float, float, float]]], optional): dictionary mapping from ray index to \
+                                                                               list of intersections.
     """
-
-    # TODO: this shouldn't be egocentric right?
-    origin = cfg.EGOCENTRIC_MAP_ORIGIN_OFFSET
-
     grid: NDArray[Shape["NumPixelsX, NumPixelsY, NumPixelsZ"], Float] = semantic_map_3d[:,:,:,0]
     grid_classes: NDArray[Shape["NumPixelsX, NumPixelsY, NumPixelsZ, NumChannels-1"], Float] = (
         np.argmax(semantic_map_3d[:,:,:,1:], axis = -1))
@@ -52,14 +106,9 @@ def raytrace_3d(theta: NDArray[Shape["NRays"], Float],                          
     sgnsinsin = np.sign(sinsin).astype(int)
     sgncos = np.sign(cos).astype(int)
 
-    # Initialize arrays to store the current position of each ray
-    x_arr, y_arr, z_arr = np.zeros_like(theta), np.zeros_like(theta), np.zeros_like(theta)
-    i,j,k = (np.ones_like(theta, dtype=int)*origin[0], np.ones_like(theta, dtype=int)*origin[1],
-            np.ones_like(theta, dtype=int)*origin[2])
-
-    i -= (sgnsincos<0).astype(int)
-    j -= (sgnsinsin<0).astype(int)
-    k -= (sgncos<0).astype(int)
+    x_arr, y_arr, z_arr, i_arr, j_arr, k_arr = get_ray_origin_coords_and_indices(ray_origin_coords,
+                                                                                 grid_index_of_origin,
+                                                                                 sincos, sinsin, cos, cfg)
 
     if return_intersections:
         intersections: Dict[int, List[Tuple[float, float, float]]] = {
@@ -68,7 +117,7 @@ def raytrace_3d(theta: NDArray[Shape["NRays"], Float],                          
     # Store indices of active rays so we don't have to iterate over all of them
     active_ray_mask = np.ones_like(theta, dtype=bool)
     # Deactivate rays that have already hit a voxel
-    rays_to_deactivate = np.where(grid[i,j,k])
+    rays_to_deactivate = np.where(grid[i_arr,j_arr,k_arr])
     active_ray_mask[rays_to_deactivate] = False
     # This creates a list of indices of active rays
     active_ray_indices = np.flatnonzero(active_ray_mask)
@@ -77,9 +126,12 @@ def raytrace_3d(theta: NDArray[Shape["NRays"], Float],                          
     while active_ray_indices.size:
         # Get the coordinate of the next grid 'wall' (wall of a potential voxel) that each ray will hit in each
         # dimension. The sign term is there because the next voxel wall depends on the direction of the ray.
-        x_next = cfg.RESOLUTION*(i[active_ray_mask] - origin[0] + (sgnsincos[active_ray_mask]>0).astype(int))
-        y_next = cfg.RESOLUTION*(j[active_ray_mask] - origin[1] + (sgnsinsin[active_ray_mask]>0).astype(int))
-        z_next = cfg.RESOLUTION*(k[active_ray_mask] - origin[2] + (sgncos[active_ray_mask]>0).astype(int))
+        x_next = cfg.RESOLUTION*(
+            i_arr[active_ray_mask] - grid_index_of_origin[0] + (sgnsincos[active_ray_mask]>0).astype(int))
+        y_next = cfg.RESOLUTION*(
+            j_arr[active_ray_mask] - grid_index_of_origin[1] + (sgnsinsin[active_ray_mask]>0).astype(int))
+        z_next = cfg.RESOLUTION*(
+            k_arr[active_ray_mask] - grid_index_of_origin[2] + (sgncos[active_ray_mask]>0).astype(int))
 
         # Calculate the 'time' it takes for each ray to hit the next grid wall in each dimension
         dt_x = (x_next - x_arr[active_ray_mask]) * cosecsec[active_ray_mask]
@@ -93,19 +145,19 @@ def raytrace_3d(theta: NDArray[Shape["NRays"], Float],                          
 
         # Update the ray to hit the closest grid wall
         x_smallest = active_ray_indices[dt_x_smallest]
-        i[x_smallest] += sgnsincos[x_smallest]
+        i_arr[x_smallest] += sgnsincos[x_smallest]
         x_arr[x_smallest] = x_next[dt_x_smallest]
         y_arr[x_smallest] += sinsin[x_smallest] * dt_x[dt_x_smallest]
         z_arr[x_smallest] += cos[x_smallest] * dt_x[dt_x_smallest]
 
         y_smallest = active_ray_indices[dt_y_smallest]
-        j[y_smallest] += sgnsinsin[y_smallest]
+        j_arr[y_smallest] += sgnsinsin[y_smallest]
         x_arr[y_smallest] += sincos[y_smallest] * dt_y[dt_y_smallest]
         y_arr[y_smallest] = y_next[dt_y_smallest]
         z_arr[y_smallest] += cos[y_smallest] * dt_y[dt_y_smallest]
 
         z_smallest = active_ray_indices[dt_z_smallest]
-        k[z_smallest] += sgncos[z_smallest]
+        k_arr[z_smallest] += sgncos[z_smallest]
         x_arr[z_smallest] += sincos[z_smallest] * dt_z[dt_z_smallest]
         y_arr[z_smallest] += sinsin[z_smallest] * dt_z[dt_z_smallest]
         z_arr[z_smallest] = z_next[dt_z_smallest]
@@ -118,19 +170,19 @@ def raytrace_3d(theta: NDArray[Shape["NRays"], Float],                          
                     intersections[ray_index].append((x,y,z))
 
         # If ray has hit a voxel, deactivate it
-        rays_to_deactivate_hit = np.where(grid[i,j,k])
+        rays_to_deactivate_hit = np.where(grid[i_arr,j_arr,k_arr])
         active_ray_mask[rays_to_deactivate_hit] = False
 
         # If ray has hit the limit of the grid, deactivate it
-        rays_to_deactivate_limit = np.where(np.logical_or.reduce((i == 0, j == 0, k == 0,
-                                                                i == grid.shape[0]-1,
-                                                                j == grid.shape[1]-1,
-                                                                k == grid.shape[2]-1)))
+        rays_to_deactivate_limit = np.where(np.logical_or.reduce((i_arr == 0, j_arr == 0, k_arr == 0,
+                                                                  i_arr == grid.shape[0]-1,
+                                                                  j_arr == grid.shape[1]-1,
+                                                                  k_arr == grid.shape[2]-1)))
         active_ray_mask[rays_to_deactivate_limit] = False
         active_ray_indices = np.flatnonzero(active_ray_mask)
 
     # Classify rays based on the voxel they hit, or -1 if they hit the limit of the grid
-    ray_classes: NDArray[Shape["NRays"], Int] = grid_classes[i,j,k]
+    ray_classes: NDArray[Shape["NRays"], Int] = grid_classes[i_arr,j_arr,k_arr]
     ray_classes[rays_to_deactivate_limit] = -1
 
     if return_intersections:
