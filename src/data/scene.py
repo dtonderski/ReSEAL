@@ -174,7 +174,7 @@ def get_sensor_spec(sensor_type: str, sim_cfg: CfgNode = None) -> habitat_sim.Ca
 
     sensor_spec: habitat_sim.CameraSensorSpec = habitat_sim.CameraSensorSpec()
 
-    if sensor_type == "color_sensor":THE FIRST JEDI
+    if sensor_type == "color_sensor":
         sensor_spec.sensor_type = habitat_sim.SensorType.COLOR
     elif sensor_type == "depth_sensor":
         sensor_spec.sensor_type = habitat_sim.SensorType.DEPTH
