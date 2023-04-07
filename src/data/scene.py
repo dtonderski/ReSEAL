@@ -1,6 +1,7 @@
 import habitat_sim
 import numpy as np
 
+
 def make_cfg(settings):
     sim_cfg = habitat_sim.SimulatorConfiguration()
     sim_cfg.gpu_device_id = 0
