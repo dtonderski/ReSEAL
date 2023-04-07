@@ -1,7 +1,8 @@
-from PIL import Image
 import numpy as np
-from matplotlib import pyplot as plt
 from habitat_sim.utils.common import d3_40_colors_rgb
+from matplotlib import pyplot as plt
+from PIL import Image
+
 
 # Change to do something like this maybe: https://stackoverflow.com/a/41432704
 def display_sample(rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])):

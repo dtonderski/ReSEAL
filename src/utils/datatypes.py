@@ -1,8 +1,8 @@
-from typing import Tuple, Mapping
-from nptyping import Shape, NDArray, Float
-import numpy as np
-import quaternion # pylint: disable=unused-import
+from typing import Mapping, Tuple
 
+import numpy as np
+import quaternion  # pylint: disable=unused-import
+from nptyping import Float, NDArray, Shape
 
 SemanticMap3D = NDArray[Shape["NumPixelsX, NumPixelsY, NumPixelsZ, NumChannels"], Float]
 Coordinate2D = Tuple[float, float]
