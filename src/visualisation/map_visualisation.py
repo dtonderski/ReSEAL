@@ -1,11 +1,16 @@
-import plotly.graph_objects as go
-import plotly.express as px
-import numpy as np
-from yacs.config import CfgNode
-from ..utils.geometric_transformations import grid_indices_to_world_coordinates
-from ..utils.datatypes import SemanticMap3D, GridIndex3D
+from typing import Dict, List, Union, Set, Tuple
 
-def calculate_vertices(xmin=0, ymin=0, zmin=0, xmax=None, ymax=None, zmax=None):
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from yacs.config import CfgNode
+
+from ..utils.datatypes import GridIndex3D, SemanticMap3D
+from ..utils.geometric_transformations import grid_indices_to_world_coordinates
+
+
+def calculate_vertices(xmin=0, ymin=0, zmin=0, xmax=None, ymax=None, zmax=None) \
+    -> Dict[str, Union[List[float], List[int]]]:
     xmax = xmin + 1 if xmax is None else xmax
     ymax = ymin + 1 if ymax is None else ymax
     zmax = zmin + 1 if zmax is None else zmax
@@ -19,7 +24,7 @@ def calculate_vertices(xmin=0, ymin=0, zmin=0, xmax=None, ymax=None, zmax=None):
     }
 
 def draw_cube(vertices, color = "gold", opacity = 0.5, name = "cube", colors_shown_in_legend = None,
-              legendrank = 0):
+              legendrank = 0) -> Tuple[go.Figure, Set[str]]:
     colors_shown_in_legend = set() if colors_shown_in_legend is None else colors_shown_in_legend
     if color in colors_shown_in_legend:
         showlegend = False
@@ -49,7 +54,8 @@ def draw_cube(vertices, color = "gold", opacity = 0.5, name = "cube", colors_sho
     return fig, colors_shown_in_legend
 
 def draw_voxels(semantic_3d_map: SemanticMap3D, grid_indices_of_origin: GridIndex3D,
-                cfg: CfgNode, colorscale: str = "viridis", return_colors = False):
+                cfg: CfgNode, colorscale: str = "viridis", return_colors = False) \
+                -> Union[List[go.Figure], Tuple[List[go.Figure], List[str]]]:
     indices_of_occupied_voxels = np.array(np.where(semantic_3d_map[:,:,:,0])).transpose()
     semantic_classes_of_occupied_voxels = np.argmax(
         semantic_3d_map[np.where(semantic_3d_map[:,:,:,0])][:,1:], axis=1)
