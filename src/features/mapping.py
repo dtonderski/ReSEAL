@@ -2,8 +2,7 @@ import numpy as np
 import quaternion
 from nptyping import Float, Int, NDArray, Shape
 from yacs.config import CfgNode
-import numpy as np
-from ..utils.geometric_transformations import coordinates_to_grid_indices
+
 from ..utils.datatypes import (
     Coordinate3D,
     CoordinatesMapping2Dto3D,
@@ -14,6 +13,7 @@ from ..utils.datatypes import (
     SemanticMap2D,
     SemanticMap3D,
 )
+from ..utils.geometric_transformations import coordinates_to_grid_indices
 
 
 class Geocentric3DMapBuilder:

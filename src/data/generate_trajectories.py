@@ -1,11 +1,17 @@
 import json
 from pathlib import Path
 from PIL import Image
+import os
+import pathlib
+
 import numpy as np
-import quaternion # type: ignore # pylint: disable=unused-import
+import quaternion  # type: ignore # pylint: disable=unused-import
 from habitat_sim.simulator import ObservationDict
+from PIL import Image
+
 from src.data import scene
 from src.config import default_data_paths_cfg
+
 
 def main() -> None:
 
