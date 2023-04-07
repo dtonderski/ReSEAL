@@ -1,6 +1,8 @@
-import numpy as np
 from typing import Union
-from nptyping import NDArray, Shape, Int, Float
+
+import numpy as np
+from nptyping import Float, Int, NDArray, Shape
+
 from ..utils.datatypes import GridIndex2D, GridIndex3D
 
 

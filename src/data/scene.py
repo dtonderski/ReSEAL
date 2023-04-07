@@ -80,7 +80,6 @@ def make_habitat_sim_cfg(scene_split: str,
 
     scene_path, scene_dataset_config_path, use_semantic_sensor = get_scene_info(scene_split, scene_id, data_paths_cfg)
 
-
     habitat_sim_cfg = habitat_sim.SimulatorConfiguration()
     habitat_sim_cfg.gpu_device_id = 0
     habitat_sim_cfg.scene_id = str(scene_path)
@@ -175,7 +174,7 @@ def get_sensor_spec(sensor_type: str, sim_cfg: CfgNode = None) -> habitat_sim.Ca
 
     sensor_spec: habitat_sim.CameraSensorSpec = habitat_sim.CameraSensorSpec()
 
-    if sensor_type == "color_sensor":
+    if sensor_type == "color_sensor":THE FIRST JEDI
         sensor_spec.sensor_type = habitat_sim.SensorType.COLOR
     elif sensor_type == "depth_sensor":
         sensor_spec.sensor_type = habitat_sim.SensorType.DEPTH
