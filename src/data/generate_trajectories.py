@@ -1,11 +1,14 @@
 import json
 import os
 import pathlib
-from PIL import Image
+
 import numpy as np
-import quaternion # type: ignore # pylint: disable=unused-import
+import quaternion  # type: ignore # pylint: disable=unused-import
 from habitat_sim.simulator import ObservationDict
+from PIL import Image
+
 from src.data import scene
+
 
 def main() -> None:
     with open('config/trajectories.json', 'r', encoding="utf-8") as file:

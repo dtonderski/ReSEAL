@@ -1,9 +1,12 @@
 from typing import Dict, List, Tuple, Union
+
 import numpy as np
+from nptyping import Float, Int, NDArray, Shape
 from yacs.config import CfgNode
-from nptyping import NDArray, Shape, Float, Int
-from ..utils.datatypes import SemanticMap3D, Coordinate3D, GridIndex3D
+
+from ..utils.datatypes import Coordinate3D, GridIndex3D, SemanticMap3D
 from ..utils.geometric_transformations import coordinates_to_grid_indices
+
 
 def get_ray_origin_coords_and_indices(ray_origin_coords: Union[Coordinate3D, NDArray[Shape["NRays, 3"], Float]],
                                       grid_index_of_origin: GridIndex3D,
