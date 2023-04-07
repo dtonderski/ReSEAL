@@ -1,6 +1,6 @@
 import json
-import os
-import pathlib
+from pathlib import Path
+from PIL import Image
 
 import numpy as np
 import quaternion  # type: ignore # pylint: disable=unused-import
@@ -8,24 +8,37 @@ from habitat_sim.simulator import ObservationDict
 from PIL import Image
 
 from src.data import scene
+from src.config import default_data_paths_cfg
 
 
 def main() -> None:
+
     with open('config/trajectories.json', 'r', encoding="utf-8") as file:
         json_dict = json.load(file)
 
-    base_destination_dir = 'data/interim/trajectories/train'
+    data_paths_cfg = default_data_paths_cfg()
 
-    for scene_path, actions in json_dict.items():
-        scene_destination_dir = os.path.join(base_destination_dir, pathlib.PurePath(scene_path).parent.name)
+    trajectories_dir = Path(data_paths_cfg.TRAJECTORIES_DIR)
 
-        os.makedirs(os.path.join(scene_destination_dir, "RGB"),
-                    exist_ok=True)
-        os.makedirs(os.path.join(scene_destination_dir, "D"),
-                    exist_ok=True)
+    for scene_info, actions in json_dict.items():
 
-        sim = scene.initialize_scene(f"data/raw/train/scene_datasets/hm3d/train/{scene_path}")
-        print(f"Generating trajectory from scene {scene_path} and saving to {scene_destination_dir}")
+        scene_split,scene_id = scene_info.split('/')
+        scene_destination_dir = trajectories_dir / scene_split / scene_id
+
+        rgb_dir = scene_destination_dir / "RGB"
+        rgb_dir.mkdir(parents=True, exist_ok=True)
+
+        d_dir = scene_destination_dir / "D"
+        d_dir.mkdir(parents=True, exist_ok=True)
+
+        sim = scene.initialize_sim(scene_split, scene_id)
+
+        semantics_used = scene.check_if_semantic_sensor_used(sim)
+        if semantics_used:
+            sim_dir = scene_destination_dir / "Semantic"
+            sim_dir.mkdir(parents=True, exist_ok=True)
+
+        print(f"Generating trajectory from scene {scene_info} and saving to {scene_destination_dir}")
 
         current_frame = 0
 
@@ -41,10 +54,15 @@ def main() -> None:
                 depth = observations["depth_sensor"] # pylint: disable=unsubscriptable-object
 
                 # Only get RGB, discard last dimension
-                Image.fromarray(rgb[:,:,:3]).save(os.path.join(scene_destination_dir, "RGB", f"{current_frame}.png"))
+                Image.fromarray(rgb[:,:,:3]).save(rgb_dir / f"{current_frame}.png")
 
                 # Save depth
-                np.save(os.path.join(scene_destination_dir, "D", f"{current_frame}"), depth)
+                np.save(d_dir / f"{current_frame}", depth)
+
+                # Save semantic
+                if semantics_used:
+                    semantics = observations["semantic_sensor"] # pylint: disable=unsubscriptable-object
+                    np.save(sim_dir / f"{current_frame}", semantics)
 
                 positions[current_frame] = sim.get_agent(0).state.position
                 rotations[current_frame] = sim.get_agent(0).state.rotation
@@ -55,7 +73,9 @@ def main() -> None:
                 break
 
         # Save positions and rotations
-        np.save(os.path.join(scene_destination_dir, "positions"), positions)
-        np.save(os.path.join(scene_destination_dir, "rotations"), rotations)
+        np.save(scene_destination_dir / "positions", positions)
+        np.save(scene_destination_dir / "rotations", rotations)
+        
+
 if __name__ == '__main__':
     main()
