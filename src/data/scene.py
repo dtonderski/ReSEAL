@@ -150,7 +150,7 @@ def get_scene_info(scene_split: str,
 
     scene_filename = f'{scene_id_without_index}.basis.glb'
 
-    scene_path = Path(data_paths_cfg.RAW_DATA_DIR, scene_split, 
+    scene_path = Path(data_paths_cfg.RAW_DATA_DIR, scene_split,
                     "scene_datasets", "hm3d", scene_split, scene_id, scene_filename)
 
     return scene_path, scene_dataset_config_path, use_semantic_sensor
