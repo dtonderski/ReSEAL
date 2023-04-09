@@ -228,8 +228,7 @@ def raytrace_3d_from_angles(theta: NDArray[Shape["NRays"], Float],              
     """Traces rays through a 3D semantic map until they hit a voxel, and returns the class of the voxel they hit.
 
     Args:
-        theta (NDArray[Shape["NRays"], Float]): flat array of theta angles of rays.
-        phi (NDArray[Shape["NRays"], Float]): flat array of phi angles of rays.
+        ray_directions (NDArray[Shape["NRays, 3"], Float]): array containing the x,y,z directions of each ray.
         semantic_map_3d (SemanticMap3D): semantic map of the scene in which to raytrace.
         ray_origin_coords (Union[Coordinate3D, NDArray[Shape["NRays, 3"], Float]]): either a tuple containing the \
             coordinates of the origin of all rays, or an array of shape (NRays, 3) containing the coordinates of the \
