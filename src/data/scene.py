@@ -6,7 +6,7 @@ import numpy as np
 import habitat_sim
 from yacs.config import CfgNode
 
-from ..config import default_data_paths_cfg, default_sim_cfg
+from ..config import default_data_paths_cfg, default_sim_cfg, default_sensor_cfg
 
 def initialize_sim(scene_split: str,
                    scene_id: str,
@@ -88,11 +88,11 @@ def make_habitat_sim_cfg(scene_split: str,
 
     # Note: all sensors must have the same resolution
     sensor_specs = []
-    sensor_specs.append(get_sensor_spec("color_sensor", sim_cfg))
-    sensor_specs.append(get_sensor_spec("depth_sensor", sim_cfg))
+    sensor_specs.append(get_sensor_spec("color_sensor", sim_cfg.SENSOR_CFG))
+    sensor_specs.append(get_sensor_spec("depth_sensor", sim_cfg.SENSOR_CFG))
 
     if use_semantic_sensor:
-        sensor_specs.append(get_sensor_spec("semantic_sensor", sim_cfg))
+        sensor_specs.append(get_sensor_spec("semantic_sensor", sim_cfg.SENSOR_CFG))
 
     # Here you can specify the amount of displacement in a forward action and the turn angle
     agent_cfg = habitat_sim.agent.AgentConfiguration()
@@ -156,7 +156,7 @@ def get_scene_info(scene_split: str,
     return scene_path, scene_dataset_config_path, use_semantic_sensor
 
 
-def get_sensor_spec(sensor_type: str, sim_cfg: CfgNode = None) -> habitat_sim.CameraSensorSpec:
+def get_sensor_spec(sensor_type: str, sensor_cfg: CfgNode = None) -> habitat_sim.CameraSensorSpec:
     """ Creates a sensor spec for the given sensor type.
 
     Args:
@@ -169,8 +169,8 @@ def get_sensor_spec(sensor_type: str, sim_cfg: CfgNode = None) -> habitat_sim.Ca
 
     assert sensor_type in ["color_sensor", "depth_sensor", "semantic_sensor"]
 
-    if sim_cfg is None:
-        sim_cfg = default_sim_cfg()
+    if sensor_cfg is None:
+        sensor_cfg = default_sensor_cfg()
 
     sensor_spec: habitat_sim.CameraSensorSpec = habitat_sim.CameraSensorSpec()
 
@@ -182,8 +182,9 @@ def get_sensor_spec(sensor_type: str, sim_cfg: CfgNode = None) -> habitat_sim.Ca
         sensor_spec.sensor_type = habitat_sim.SensorType.SEMANTIC
 
     sensor_spec.uuid = sensor_type
-    sensor_spec.resolution = [sim_cfg.HEIGHT, sim_cfg.WIDTH]
-    sensor_spec.position = [0.0, sim_cfg.SENSOR_HEIGHT, 0.0]
+    sensor_spec.resolution = [sensor_cfg.HEIGHT, sensor_cfg.WIDTH]
+    sensor_spec.hfov = sensor_cfg.HFOV
+    sensor_spec.position = [0.0, sensor_cfg.SENSOR_HEIGHT, 0.0]
     sensor_spec.sensor_subtype = habitat_sim.SensorSubType.PINHOLE
 
     return sensor_spec
