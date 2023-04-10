@@ -19,17 +19,22 @@ def default_data_paths_cfg() -> CfgNode:
                                                                        "hm3d_basis.scene_dataset_config.json"))
     data_paths_cfg.INTERIM_DATA_DIR = str(Path("data", "interim"))
     data_paths_cfg.TRAJECTORIES_DIR = str(Path(data_paths_cfg.INTERIM_DATA_DIR, "trajectories"))
-    
+
     return data_paths_cfg
 
 def default_sim_cfg() -> CfgNode:
     sim_cfg = CfgNode()
-    sim_cfg.WIDTH = 256 #px
-    sim_cfg.HEIGHT = 256 #px
-    sim_cfg.SENSOR_HEIGHT = 0.88 #m
+    sim_cfg.SENSOR_CFG = default_sensor_cfg()
     sim_cfg.FORWARD_MOVE_DISPLACEMENT = 0.25 #m
     sim_cfg.TURN_ANGLE_DISPLACEMENT = 30 #deg
     sim_cfg.DEFAULT_AGENT_ID = 0
     sim_cfg.DEFAULT_POSITION = [-0.6, 0.0, 0.0] #m
     return sim_cfg
-    
+
+def default_sensor_cfg() -> CfgNode:
+    sensor_cfg = CfgNode()
+    sensor_cfg.WIDTH = 256 #px
+    sensor_cfg.HEIGHT = 256 #px
+    sensor_cfg.HFOV = 90 #deg
+    sensor_cfg.SENSOR_HEIGHT = 0.88 #m
+    return sensor_cfg
