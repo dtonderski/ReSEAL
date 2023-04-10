@@ -8,6 +8,8 @@ from yacs.config import CfgNode
 from ..features.raytracing import raytrace_3d
 from ..utils.datatypes import Coordinate3D, GridIndex3D, SemanticMap2D, SemanticMap3D
 
+from ..features.raytracing import raytrace_3d
+from ..utils.datatypes import Coordinate3D, GridIndex3D, SemanticMap2D, SemanticMap3D
 
 def get_ray_directions_sensor_coords(sensor_cfg: CfgNode) -> NDArray[Shape["3, Height, Width"], Float]:
     """ Get the directions of rays in camera coordinates for a given sensor config. \
