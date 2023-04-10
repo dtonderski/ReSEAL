@@ -8,7 +8,6 @@ from yacs.config import CfgNode
 
 from ..config import default_data_paths_cfg, default_sim_cfg, default_sensor_cfg
 
-
 def initialize_sim(
     scene_split: str, scene_id: str, data_paths_cfg: CfgNode = None, sim_cfg: CfgNode = None, verbose: bool = False
 ) -> habitat_sim.Simulator:
