@@ -7,7 +7,7 @@ from ..features.raytracing import raytrace_3d
 from ..utils.datatypes import Coordinate3D, GridIndex3D, SemanticMap2D, SemanticMap3D
 
 
-def get_ray_directions_sensor_coords(sensor_cfg: CfgNode) -> NDArray[Shape["3, Width, Height"], Float]:
+def get_ray_directions_sensor_coords(sensor_cfg: CfgNode) -> NDArray[Shape["3, Height, Width"], Float]:
     """ Get the directions of rays in camera coordinates for a given sensor config. \
         www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-generating-camera-rays/generating-camera-rays.html
 
@@ -15,7 +15,7 @@ def get_ray_directions_sensor_coords(sensor_cfg: CfgNode) -> NDArray[Shape["3, W
         sensor_config (CfgNode): sensor config, must contain WIDTH, HEIGHT, HFOV
 
     Returns:
-        NDArray[Shape["Width, Height, 3"], Float]: element at index [i,j] is the direction of the ray corresponding \
+        NDArray[Shape["3, Height, Width"], Float]: element at index [:,i,j] is the direction of the ray corresponding \
             to the pixel at index [i,j] in the image.
     """
 
@@ -29,7 +29,7 @@ def get_ray_directions_sensor_coords(sensor_cfg: CfgNode) -> NDArray[Shape["3, W
     # Here, we need to divide by the image aspect ratio because pixels have to be square in camera coordinates
     pixel_camera_y = pixel_screen_y/(sensor_cfg.WIDTH/sensor_cfg.HEIGHT)* np.tan(sensor_cfg.HFOV/2*np.pi/180)
 
-    ray_directions_x, ray_directions_y = np.meshgrid(pixel_camera_x, pixel_camera_y, indexing = 'ij')
+    ray_directions_x, ray_directions_y = np.meshgrid(pixel_camera_x, pixel_camera_y)
     ray_directions_z = -np.ones_like(ray_directions_x)
 
     ray_directions = np.stack([ray_directions_x, ray_directions_y, ray_directions_z], axis=0)
@@ -125,4 +125,4 @@ def ray_labels_to_semantic_map_2d(ray_labels: NDArray[Shape["NRays, NChannels"],
     Returns:
         SemanticMap2D: semantic 2d map of the scene from the viewpoint of the sensor.
     """
-    return ray_labels.reshape(sensor_cfg.WIDTH, sensor_cfg.HEIGHT, -1)[:,:,1:]
+    return ray_labels.reshape(sensor_cfg.HEIGHT, sensor_cfg.WIDTH, -1)[:,:,1:]
