@@ -31,5 +31,7 @@ def default_sim_cfg() -> CfgNode:
     sim_cfg.TURN_ANGLE_DISPLACEMENT = 30 #deg
     sim_cfg.DEFAULT_AGENT_ID = 0
     sim_cfg.DEFAULT_POSITION = [-0.6, 0.0, 0.0] #m
+    sim_cfg.HFOV = 90 #deg
+
     return sim_cfg
     
