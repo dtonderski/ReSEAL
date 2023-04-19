@@ -1,6 +1,8 @@
 import numpy as np
 import quaternion
 from nptyping import Float, Int, NDArray, Shape
+from src.config import default_sim_cfg
+import open3d as o3d
 from yacs.config import CfgNode
 
 from ..utils.datatypes import (
@@ -40,7 +42,24 @@ class Geocentric3DMapBuilder:
 
     # pylint: disable=invalid-name
     def _calc_2D_to_3D_coordinate_mapping(self, depth_map: DepthMap, pose: Pose) -> CoordinatesMapping2Dto3D:
-        raise NotImplementedError
+        #get camera intrinsics
+        sim_cfg = default_sim_cfg()
+        w,h = sim_cfg.WIDTH,sim_cfg.HEIGHT #img width and height in px
+        cx,cy = w/2,h/2 #point of origin in x and y dimension
+        hfov = sim_cfg.HFOV #horizontal field of view in degrees of pinhole camera model
+        hfov = float(hfov) * np.pi / 180. #transformation of the hfov-degrees
+        f = (cx/2)/np.tan(hfov/2) #focal length in mm
+        
+        #load intrinsics into open3d functions
+        #assign camera intrinsics
+        intrinsic = o3d.camera.PinholeCameraIntrinsic(width=w, height=h, fx=f, fy=f, cx=cx, cy=cy)
+        #create point cloud from depth map
+        pcd = o3d.geometry.PointCloud.create_from_depth_image(o3d.geometry.Image(DepthMap), intrinsic)
+        Coordinate3D = np.asarray(pcd.points)
+        
+        #return 3D coordinates
+        return Coordinate3D
+    
 
     def _calc_egocentric_map(self, semantic_map: SemanticMap2D,
                              img_to_ego_coord_mapping: CoordinatesMapping2Dto3D,) -> SemanticMap3D:
