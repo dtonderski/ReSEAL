@@ -48,7 +48,14 @@ class Geocentric3DMapBuilder:
 
     def _calculate_point_cloud(self, depth_map: datatypes.DepthMap, pose: datatypes.Pose) -> o3d.geometry.PointCloud:
         depth_image = o3d.geometry.Image(depth_map)
-        extrinsic = HomogenousTransformFactory.from_pose(pose)
+        # Flip x axis of position vector. Why? No idea
+        translation_vector, rotation_quaternion = pose
+        translation_vector = np.array([
+            [-1, 0, 0],
+            [0, 1, 0],
+            [0, 0, 1],
+        ]) @ translation_vector
+        extrinsic = HomogenousTransformFactory.from_pose((translation_vector, rotation_quaternion), translate_first=False)
         return o3d.geometry.PointCloud.create_from_depth_image(depth_image, self._intrinsic, extrinsic)
 
     def _update_point_cloud_semantic_labels(self, semantic_map: datatypes.SemanticMap2D, depth_map: datatypes.DepthMap):

@@ -30,11 +30,13 @@ def grid_indices_to_world_coordinates(
 
 class HomogenousTransformFactory:
     @staticmethod
-    def from_pose(pose: Pose) -> HomogenousTransform:
+    def from_pose(pose: Pose, translate_first: bool = True) -> HomogenousTransform:
         """Returns a 4x4 homogenous matrix from a pose consisting of a translation vector and a rotation quaternion"""
         translation_vector, rotation_quaternion = pose
         rotation_transformation = HomogenousTransformFactory.from_quaternion(rotation_quaternion)
         translation_transformation = HomogenousTransformFactory.from_translation(translation_vector)
+        if translate_first:
+            return np.matmul(translation_transformation, rotation_transformation)
         return np.matmul(rotation_transformation, translation_transformation)
 
     @staticmethod
