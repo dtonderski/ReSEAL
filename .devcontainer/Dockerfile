@@ -23,5 +23,11 @@ RUN useradd -G sudo -m ${USERNAME} && \
 
 RUN chmod -R 777 /habitat-lab
 
+# Upgrade GCC for open3d
+RUN apt-get update && apt-get install -y software-properties-common && \
+    add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
+    apt-get update && apt-get install -y gcc-9 && \
+    apt-get upgrade -y libstdc++6
+
 ENV DEBIAN_FRONTEND=dialog
 ENV SHELL=/bin/bash
