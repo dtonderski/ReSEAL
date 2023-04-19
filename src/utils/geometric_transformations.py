@@ -33,10 +33,9 @@ class HomogenousTransformFactory:
     def from_pose(pose: Pose) -> HomogenousTransform:
         """Returns a 4x4 homogenous matrix from a pose consisting of a translation vector and a rotation quaternion"""
         translation_vector, rotation_quaternion = pose
-        return (
-            HomogenousTransformFactory.from_translation(translation_vector) @ 
-            HomogenousTransformFactory.from_quaternion(rotation_quaternion)
-        )
+        rotation_transformation = HomogenousTransformFactory.from_quaternion(rotation_quaternion)
+        translation_transformation = HomogenousTransformFactory.from_translation(translation_vector)
+        return np.matmul(rotation_transformation, translation_transformation)
 
     @staticmethod
     def from_translation(translation: TranslationVector) -> HomogenousTransform:
