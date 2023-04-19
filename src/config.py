@@ -34,7 +34,11 @@ def default_sim_cfg() -> CfgNode:
     sim_cfg.TURN_ANGLE_DISPLACEMENT = 30 #deg
     sim_cfg.DEFAULT_AGENT_ID = 0
     sim_cfg.DEFAULT_POSITION = [-0.6, 0.0, 0.0]  # m
-    sim_cfg.HFOV = 90  # deg
+    sim_cfg.SENSOR_CFG = CfgNode()
+    sim_cfg.SENSOR_CFG.WIDTH = 256  # px
+    sim_cfg.SENSOR_CFG.HEIGHT = 256  # px
+    sim_cfg.SENSOR_CFG.HFOV = 90  # px
+    sim_cfg.SENSOR_CFG.ORTHO_SCALE = 0.1  # m
 
     return sim_cfg
 
