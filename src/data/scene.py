@@ -1,18 +1,17 @@
 import json
-from typing import Tuple
 from pathlib import Path
+from typing import Tuple
 
-import numpy as np
 import habitat_sim
+import numpy as np
 from yacs.config import CfgNode
 
 from ..config import default_data_paths_cfg, default_sim_cfg, default_sensor_cfg
 
-def initialize_sim(scene_split: str,
-                   scene_id: str,
-                   data_paths_cfg: CfgNode = None,
-                   sim_cfg: CfgNode = None,
-                   verbose:bool=False) -> habitat_sim.Simulator:
+
+def initialize_sim(
+    scene_split: str, scene_id: str, data_paths_cfg: CfgNode = None, sim_cfg: CfgNode = None, verbose: bool = False
+) -> habitat_sim.Simulator:
     """ Initialize the simulator from a given scene
 
     Args:
@@ -46,8 +45,9 @@ def initialize_sim(scene_split: str,
 
     return sim
 
+
 def check_if_semantic_sensor_used(sim: habitat_sim.Simulator) -> bool:
-    """ Utility function that checks whether the first (and usually only) agent in the scene has a semantic sensor.
+    """Utility function that checks whether the first (and usually only) agent in the scene has a semantic sensor.
 
     Args:
         sim (habitat_sim.Simulator): the initialized simulator
@@ -55,14 +55,12 @@ def check_if_semantic_sensor_used(sim: habitat_sim.Simulator) -> bool:
     Returns:
         bool: True if the first agent has a semantic sensor, False otherwise.
     """
-    return any(x.sensor_type == habitat_sim.SensorType.SEMANTIC
-                for x in sim.config.agents[0].sensor_specifications)
+    return any(x.sensor_type == habitat_sim.SensorType.SEMANTIC for x in sim.config.agents[0].sensor_specifications)
 
 
-def make_habitat_sim_cfg(scene_split: str,
-                         scene_id: str,
-                         data_paths_cfg: CfgNode = None,
-                         sim_cfg: CfgNode = None) -> habitat_sim.Configuration:
+def make_habitat_sim_cfg(
+    scene_split: str, scene_id: str, data_paths_cfg: CfgNode = None, sim_cfg: CfgNode = None
+) -> habitat_sim.Configuration:
     """ Creates a habitat_sim.Configuration object for a given scene
 
     Args:
@@ -112,9 +110,7 @@ def make_habitat_sim_cfg(scene_split: str,
     return habitat_sim.Configuration(habitat_sim_cfg, [agent_cfg])
 
 
-def get_scene_info(scene_split: str,
-                   scene_id: str,
-                   data_paths_cfg: CfgNode = None) -> Tuple[Path, Path, bool]:
+def get_scene_info(scene_split: str, scene_id: str, data_paths_cfg: CfgNode = None) -> Tuple[Path, Path, bool]:
     """Gets the scene path, scene dataset config path, and whether the scene uses a semantic sensor.
 
     Args:
@@ -131,27 +127,31 @@ def get_scene_info(scene_split: str,
     if data_paths_cfg is None:
         data_paths_cfg = default_data_paths_cfg()
 
-    annotated_scene_config_path: Path = Path(data_paths_cfg.RAW_DATA_DIR, scene_split,
-                                            data_paths_cfg.ANNOTATED_SCENE_CONFIG_PATH_IN_SPLIT)
+    annotated_scene_config_path: Path = Path(
+        data_paths_cfg.RAW_DATA_DIR, scene_split, data_paths_cfg.ANNOTATED_SCENE_CONFIG_PATH_IN_SPLIT
+    )
 
-    with annotated_scene_config_path.open(encoding='utf-8') as file:
+    with annotated_scene_config_path.open(encoding="utf-8") as file:
         annotated_scene_config = json.load(file)
 
     annotated_scene_set = {Path(x).parents[0] for x in annotated_scene_config["stages"]["paths"][".glb"]}
     use_semantic_sensor = Path(scene_split, scene_id) in annotated_scene_set
 
-    scene_id_without_index = scene_id.split('-')[1]
+    scene_id_without_index = scene_id.split("-")[1]
     if use_semantic_sensor:
-        scene_dataset_config_path = Path(data_paths_cfg.RAW_DATA_DIR, scene_split,
-                                        data_paths_cfg.ANNOTATED_SCENE_CONFIG_PATH_IN_SPLIT)
+        scene_dataset_config_path = Path(
+            data_paths_cfg.RAW_DATA_DIR, scene_split, data_paths_cfg.ANNOTATED_SCENE_CONFIG_PATH_IN_SPLIT
+        )
     else:
-        scene_dataset_config_path = Path(data_paths_cfg.RAW_DATA_DIR, scene_split,
-                                        data_paths_cfg.BASIS_SCENE_DATASET_CONFIG_PATH_IN_SPLIT)
+        scene_dataset_config_path = Path(
+            data_paths_cfg.RAW_DATA_DIR, scene_split, data_paths_cfg.BASIS_SCENE_DATASET_CONFIG_PATH_IN_SPLIT
+        )
 
-    scene_filename = f'{scene_id_without_index}.basis.glb'
+    scene_filename = f"{scene_id_without_index}.basis.glb"
 
-    scene_path = Path(data_paths_cfg.RAW_DATA_DIR, scene_split,
-                    "scene_datasets", "hm3d", scene_split, scene_id, scene_filename)
+    scene_path = Path(
+        data_paths_cfg.RAW_DATA_DIR, scene_split, "scene_datasets", "hm3d", scene_split, scene_id, scene_filename
+    )
 
     return scene_path, scene_dataset_config_path, use_semantic_sensor
 
@@ -186,5 +186,7 @@ def get_sensor_spec(sensor_type: str, sensor_cfg: CfgNode = None) -> habitat_sim
     sensor_spec.hfov = sensor_cfg.HFOV
     sensor_spec.position = [0.0, sensor_cfg.SENSOR_HEIGHT, 0.0]
     sensor_spec.sensor_subtype = habitat_sim.SensorSubType.PINHOLE
+    sensor_spec.hfov = sensor_cfg.HFOV
+    sensor_spec.ortho_scale = sensor_cfg.ORTHO_SCALE
 
     return sensor_spec
