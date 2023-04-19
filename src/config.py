@@ -38,7 +38,6 @@ def default_sim_cfg() -> CfgNode:
     sim_cfg.SENSOR_CFG.WIDTH = 256  # px
     sim_cfg.SENSOR_CFG.HEIGHT = 256  # px
     sim_cfg.SENSOR_CFG.HFOV = 90  # px
-    sim_cfg.SENSOR_CFG.ORTHO_SCALE = 0.1  # m
 
     return sim_cfg
 
