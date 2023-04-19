@@ -5,6 +5,11 @@ numba==0.55.2
 # ipykernel, plotly, nbformat, and pandas are needed for visualisation of 3d maps in notebooks
 ipykernel==6.16.2
 plotly==5.13.1
-nbformat==5.8.0
+nbformat==5.7.0
 pandas==1.3.5
-stable-baseline3==1.8.0
+# have to manually install gym==0.21.0 because habitat-lab requires gym >=0.22.0,<0.23.1, 
+# but stable-baselines3 requires gym==0.21.0
+gym==0.21.0
+stable-baselines3==1.8.0
+# open3d for map builder
+open3d==0.17.0
