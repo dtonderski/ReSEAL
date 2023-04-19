@@ -34,9 +34,8 @@ class HomogenousTransformFactory:
         """Returns a 4x4 homogenous matrix from a pose consisting of a translation vector and a rotation quaternion"""
         translation_vector, rotation_quaternion = pose
         return (
-            HomogenousTransformFactory.from_translation(translation_vector)
-            + HomogenousTransformFactory.from_quaternion(rotation_quaternion)
-            - np.eye(4)
+            HomogenousTransformFactory.from_translation(translation_vector) @ 
+            HomogenousTransformFactory.from_quaternion(rotation_quaternion)
         )
 
     @staticmethod
