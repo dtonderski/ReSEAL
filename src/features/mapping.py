@@ -1,7 +1,7 @@
 import numpy as np
 import open3d as o3d
 import quaternion
-from nptyping import Float, Int, NDArray, Shape
+from nptyping import Int, NDArray, Shape
 from yacs.config import CfgNode
 
 from src.config import default_sim_cfg
@@ -20,12 +20,19 @@ from ..utils.geometric_transformations import coordinates_to_grid_indices
 
 
 class Geocentric3DMapBuilder:
-    def __init__(self, camera_intrinsics, cfg: CfgNode) -> None:
-        self._camera_intrinsics = camera_intrinsics
-        self._resolution = cfg.RESOLUTION  # cm per pixel
-        self._egocentric_map_shape = cfg.EGOCENTRIC_MAP_SHAPE  # (x, y, z) in pixels
-        self._egocentric_map_origin_offset = cfg.EGOCENTRIC_MAP_ORIGIN_OFFSET  # (x, y, z) in pixels
-        self._num_semantic_classes = cfg.NUM_SEMANTIC_CLASSES
+    def __init__(self, map_builder_cfg: CfgNode, sim_cfg: CfgNode) -> None:
+        self._resolution = map_builder_cfg.RESOLUTION  # cm per pixel
+        self._egocentric_map_shape = map_builder_cfg.EGOCENTRIC_MAP_SHAPE  # (x, y, z) in pixels
+        self._egocentric_map_origin_offset = map_builder_cfg.EGOCENTRIC_MAP_ORIGIN_OFFSET  # (x, y, z) in pixels
+        self._num_semantic_classes = map_builder_cfg.NUM_SEMANTIC_CLASSES
+        self._intrinsic = o3d.camera.PinHoleCameraIntrinsic(
+            width=sim_cfg.SENSOR_CFG.WIDTH,
+            height=sim_cfg.SENSOR_CFG.HEIGHT,
+            cx=sim_cfg.SENSOR_CFG.WIDTH / 2,
+            cy=sim_cfg.SENSOR_CFG.HEIGHT / 2,
+            fx=sim_cfg.SENSOR_CFG.ORTHO_SCALE,
+            fy=sim_cfg.SENSOR_CFG.ORTHO_SCALE,
+        )
         # Initialize geocentric map
         self._geocentric_map: SemanticMap3D = np.zeros((1, 1, 1))
         self._world_origin_in_geo: Coordinate3D = (0, 0, 0)  # Cooordinate in geocentric map of origin in world frame
@@ -44,18 +51,8 @@ class Geocentric3DMapBuilder:
     # pylint: disable=invalid-name
     def _calc_2D_to_3D_coordinate_mapping(self, depth_map: DepthMap, pose: Pose) -> CoordinatesMapping2Dto3D:
         # get camera intrinsics
-        sim_cfg = default_sim_cfg()
-        w, h = sim_cfg.WIDTH, sim_cfg.HEIGHT  # img width and height in px
-        cx, cy = w / 2, h / 2  # point of origin in x and y dimension
-        hfov = sim_cfg.HFOV  # horizontal field of view in degrees of pinhole camera model
-        hfov = float(hfov) * np.pi / 180.0  # transformation of the hfov-degrees
-        f = (cx / 2) / np.tan(hfov / 2)  # focal length in mm
-
-        # load intrinsics into open3d functions
-        # assign camera intrinsics
-        intrinsic = o3d.camera.PinholeCameraIntrinsic(width=w, height=h, fx=f, fy=f, cx=cx, cy=cy)
         # create point cloud from depth map
-        pcd = o3d.geometry.PointCloud.create_from_depth_image(o3d.geometry.Image(DepthMap), intrinsic)
+        pcd = o3d.geometry.PointCloud.create_from_depth_image(o3d.geometry.Image(DepthMap), self._intrinsic)
         Coordinate3D = np.asarray(pcd.points)
 
         # return 3D coordinates
