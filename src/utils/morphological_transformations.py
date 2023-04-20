@@ -1,8 +1,11 @@
-from scipy.ndimage.measurements import label, find_objects
-import numpy as np
-from ..utils.datatypes import LabelMap3D, SemanticMap3D
 import operator
 from typing import Callable
+
+import numpy as np
+from scipy.ndimage.measurements import find_objects, label
+
+from ..utils.datatypes import LabelMap3D, SemanticMap3D
+
 
 def semantic_map_to_label_map(semantic_map: SemanticMap3D, no_object_threshold: float) -> LabelMap3D:
     semantic_info = semantic_map[:, :, :, 1:]
@@ -20,23 +23,28 @@ def fill_holes(label_map: LabelMap3D, number_of_voxels_threshold: int,
     labeled_hole_map, _ = label(inv_map)
     hole_sizes = np.bincount(labeled_hole_map.flatten())[1:]
 
+
     # Find the labels of components smaller than the threshold
     small_holes = np.where(comparator(hole_sizes, number_of_voxels_threshold))[0] + 1
+    # Find all bounding boxes
+    hole_bounding_boxes = np.array(find_objects(labeled_hole_map))
 
     for hole_label in small_holes:
         # Find the bounding box of the hole
-        bounding_box = find_objects(labeled_hole_map == hole_label)[0]
+        bounding_box = hole_bounding_boxes[0]
         # Get the labels of the voxels in the bounding box. Since the hole might be exactly rectangular, we need to
         # first increase the bounding box by 1 in each direction to make sure we get the neighbors of the hole voxels
         bounding_box = [slice(max(0, bounding_box[0].start - 1), min(label_map.shape[0], bounding_box[0].stop + 1)),
                         slice(max(0, bounding_box[1].start - 1), min(label_map.shape[1], bounding_box[1].stop + 1)),
                         slice(max(0, bounding_box[2].start - 1), min(label_map.shape[2], bounding_box[2].stop + 1))]
 
-        bounding_box_labels = label_map[bounding_box[0], bounding_box[1], bounding_box[2]]
-
+        bounding_box_labels = label_map[bounding_box[0], bounding_box[1], bounding_box[2]].flatten()
+        labels_of_labelled_neighbors = bounding_box_labels[bounding_box_labels>0]
         # Calculate the most frequent onehot encoding
-        most_frequent_label = np.argmax(np.bincount(bounding_box_labels))
+        most_frequent_label = np.argmax(np.bincount(labels_of_labelled_neighbors))
 
-        if most_frequent_label > 0:
-            # Here, we do not need to subtract 1 from the most_frequent_label because we have the occupancy channel
-            label_map[labeled_hole_map == hole_label] = most_frequent_label
+
+        # Here, we do not need to subtract 1 from the most_frequent_label because we have the occupancy channel
+        label_map[labeled_hole_map == hole_label] = most_frequent_label
+
+    return label_map
