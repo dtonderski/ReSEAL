@@ -11,12 +11,6 @@ def create_observation_space(global_policy_cfg: CfgNode) -> spaces.Space:
 def create_action_space() -> spaces.Space:
     """
     Action space of the global policy.
-    Consists of:
-    - poition: 3D position (i.e. spaces.Box with shape (3,), bounds=[-inf, inf])
-    - rotation: 4D quaternion (i.e. spaces.Box with shape (4,), bounds=[-1, 1])
+    - position: 3D position (i.e. spaces.Box with shape (3,), bounds=[-inf, inf])
     """
-    pose_space = {
-        'position': spaces.Box(low=-np.inf, high=np.inf, shape=(3,)),
-        'rotation': spaces.Box(low=-1, high=1, shape=(4,)),
-    }
-    return spaces.Dict(pose_space)
+    return spaces.Box(low=-np.inf, high=np.inf, shape=(3,))
