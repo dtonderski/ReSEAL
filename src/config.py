@@ -52,7 +52,7 @@ def default_action_module_cfg() -> CfgNode:
     action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE.INIT_LR = 0.0001
     # Config for local policy
     action_module_cfg.LOCAL_POLICY = CfgNode()
-    action_module_cfg.LOCAL_POLICY.MAX_NUM_STEPS = 100
+    action_module_cfg.LOCAL_POLICY.DISTANCE_THRESHOLD = 0.1 #m
     # Config for inference
     action_module_cfg.ACTION_PIPELINE = CfgNode()
     action_module_cfg.ACTION_PIPELINE.IS_DETERMINISTIC = True
