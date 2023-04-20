@@ -1,7 +1,9 @@
+from warnings import warn
 from abc import ABC, abstractmethod
 from typing import Optional
 
 import numpy as np
+from habitat_sim.errors import GreedyFollowerError
 from habitat_sim.agent import Agent
 from habitat_sim.nav import GreedyGeodesicFollower, PathFinder
 from yacs.config import CfgNode
@@ -27,7 +29,12 @@ class GreedyLocalPolicy(LocalPolicy):
         if self._is_agent_within_threshold(global_goal):
             return None
         global_goal_arr = np.array(global_goal)
-        return self._planner.next_action_along(global_goal_arr)
+        try:
+            action = self._planner.next_action_along(global_goal_arr)
+        except GreedyFollowerError:
+            warn("Greedy follower raised error. Ignoring and returning None.", RuntimeWarning)
+            return None
+        return action
 
     def _is_agent_within_threshold(self, global_goal: datatypes.Coordinate3D) -> bool:
         agent_position = self._agent.state.position
