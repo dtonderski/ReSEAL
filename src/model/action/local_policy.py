@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 import numpy as np
+from habitat_sim.errors import GreedyFollowerError
 from habitat_sim.agent import Agent
 from habitat_sim.nav import GreedyGeodesicFollower, PathFinder
 from yacs.config import CfgNode
