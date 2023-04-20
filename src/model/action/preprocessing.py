@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+
 import torch
 from yacs.config import CfgNode
 
