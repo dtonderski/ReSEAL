@@ -27,7 +27,7 @@ class ActionPipeline:
         self,
         semantic_map_preprocessor: SemanticMapPreprocessor,
         global_policy: ActorCriticPolicy,
-        local_policy: LocalPolicy,
+        local_policy: local_policy_module.LocalPolicy,
         action_pipeline_cfg: CfgNode,
     ) -> None:
         self._semantic_map_preprocessor = semantic_map_preprocessor
@@ -35,15 +35,18 @@ class ActionPipeline:
         self._local_policy = local_policy
         self._is_deterministic = action_pipeline_cfg.IS_DETERMINISTIC
         self._global_goal: datatypes.Coordinate3D = (0, 0, 0)
-        self._counter = _Counter(action_pipeline_cfg.GLOBAL_POLICY_POLLING_FREQUENCY)
+        self._actions_queue: List[Optional[datatypes.AgentAction]] = [None]
 
     def __call__(self, semantic_map: datatypes.SemanticMap3D) -> Optional[datatypes.AgentAction]:
         preprocessed_semantic_map = self._semantic_map_preprocessor(semantic_map)
         if self._counter.is_zero():
             global_goal, _, _ = self._global_policy(preprocessed_semantic_map, self._is_deterministic)
             self._global_goal = tuple(global_goal.numpy(force=True))  # type: ignore[assignment]
-        self._counter.step()
-        return self._local_policy(self._global_goal)
+            self._actions_queue = self._local_policy(self._global_goal)
+            action = self._actions_queue.pop()
+        if action is None:
+            raise RuntimeError("Local policy returned no action")
+        return action
 
 
 def create_action_pipeline(action_module_cfg: CfgNode, navmesh_filepath: str, agent: Agent) -> ActionPipeline:
