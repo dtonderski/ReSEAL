@@ -1,8 +1,10 @@
+from typing import List, Optional
 from yacs.config import CfgNode
 from stable_baselines3.common.policies import ActorCriticPolicy
+from habitat_sim.agent import Agent
 
 from ...utils import datatypes
-from .local_policy import LocalPolicy
+import local_policy as local_policy_module
 from .preprocessing import create_preprocessor, SemanticMapPreprocessor
 from .global_policy import create_global_policy
 
@@ -24,7 +26,7 @@ class ActionPipeline:
         self,
         semantic_map_preprocessor: SemanticMapPreprocessor,
         global_policy: ActorCriticPolicy,
-        local_policy: LocalPolicy,
+        local_policy: local_policy_module.LocalPolicy,
         action_pipeline_cfg: CfgNode,
     ) -> None:
         self._semantic_map_preprocessor = semantic_map_preprocessor
@@ -32,20 +34,24 @@ class ActionPipeline:
         self._local_policy = local_policy
         self._is_deterministic = action_pipeline_cfg.INFERENCE.IS_DETERMINISTIC
         self._global_goal: datatypes.Coordinate3D = (0, 0, 0)
-        self._counter = _Counter(action_pipeline_cfg.GLOBAL_POLICY_POLLING_FREQUENCY)
+        self._actions_queue: List[Optional[datatypes.AgentAction]] = [None]
 
     def __call__(self, semantic_map: datatypes.SemanticMap3D) -> datatypes.AgentAction:
-        processed_map = self._semantic_map_preprocessor(semantic_map)
-        if self._counter.is_zero():
+        action = self._actions_queue.pop()
+        if action is None:
+            processed_map = self._semantic_map_preprocessor(semantic_map)
             global_goal, _, _ = self._global_policy.forward(processed_map, True)
             self._global_goal = tuple(global_goal.numpy(force=True))  # type: ignore[assignment]
-        self._counter.step()
-        return self._local_policy(self._global_goal)
+            self._actions_queue = self._local_policy(self._global_goal)
+            action = self._actions_queue.pop()
+        if action is None:
+            raise RuntimeError("Local policy returned no action")
+        return action
 
 
-def create_action_pipeline(action_module_cfg: CfgNode) -> ActionPipeline:
+def create_action_pipeline(action_module_cfg: CfgNode, navmesh_filepath: str, agent: Agent) -> ActionPipeline:
     semantic_map_preprocessor = create_preprocessor(action_module_cfg.PREPROCESSOR)
     global_policy = create_global_policy(action_module_cfg.GLOBAL_POLICY)
     # TODO: Use local policy after it is implemented
-    local_policy = LocalPolicy() # type: ignore[abstract] 
+    local_policy = local_policy_module.GreedyLocalPolicy(action_module_cfg.LOCAL_POLICY, navmesh_filepath, agent)
     return ActionPipeline(semantic_map_preprocessor, global_policy, local_policy, action_module_cfg.ACTION_PIPELINE)
