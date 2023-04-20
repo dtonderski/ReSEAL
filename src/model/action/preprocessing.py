@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+
 import torch
 from yacs.config import CfgNode
 
@@ -11,5 +12,12 @@ class SemanticMapPreprocessor(ABC):
         pass
 
 
+class DummyPreprocessor(SemanticMapPreprocessor):
+    def __call__(self, _semantic_map: datatypes.SemanticMap3D) -> torch.Tensor:
+        return torch.Tensor()
+
+
 def create_preprocessor(preprocessor_cfg: CfgNode) -> SemanticMapPreprocessor:
-    raise NotImplementedError
+    if preprocessor_cfg.NAME == "DummyPreprocessor":
+        return DummyPreprocessor()
+    raise RuntimeError(f"Unknown preprocessor: {preprocessor_cfg.NAME}")

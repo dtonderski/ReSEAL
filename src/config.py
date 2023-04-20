@@ -46,7 +46,7 @@ def default_action_module_cfg() -> CfgNode:
     action_module_cfg = CfgNode()
     # Config for semantic map preprocessor
     action_module_cfg.PREPROCESSOR = CfgNode()
-    action_module_cfg.PREPROCESSOR.NAME = "SemanticMapPreprocessor"
+    action_module_cfg.PREPROCESSOR.NAME = "DummyPreprocessor"
     # Config for global policy
     action_module_cfg.GLOBAL_POLICY = CfgNode()
     action_module_cfg.GLOBAL_POLICY.NAME = "GlobalPolicy"
