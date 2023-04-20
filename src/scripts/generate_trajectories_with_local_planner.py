@@ -14,6 +14,7 @@ def main(
     scene: str = "minival/00800-TEEsavR23oF",
     start_position: Tuple = (0.0, 0.0, 0.0),
     goal_position: Tuple = (-5.0, 0.0, -1.5),
+    max_num_steps: int = 100,
 ):
     start_position = np.array(start_position)  # type: ignore[assignment]
 
@@ -49,15 +50,16 @@ def main(
 
     action_module_cfg = config.default_action_module_cfg()
     local_policy = GreedyLocalPolicy(action_module_cfg.LOCAL_POLICY, str(navmesh_filepath), agent)
-    actions = local_policy(goal_position)  # type: ignore[arg-type]
 
-    num_frames = len(actions)
-    positions = np.empty((num_frames, 3), dtype=np.float64)
-    rotations = np.empty((num_frames), dtype=np.quaternion)  # type: ignore[attr-defined]
+    positions = np.empty((max_num_steps, 3), dtype=np.float64)
+    rotations = np.empty((max_num_steps), dtype=np.quaternion)  # type: ignore[attr-defined]
 
-    action = actions.pop(0)
-    count = 0
-    while action is not None:
+    
+
+    for count in range(max_num_steps):
+        action = local_policy(goal_position) # type: ignore[arg-type]
+        if not action:
+            break
         observations = sim.step(action)
         rgb = observations["color_sensor"]
         depth = observations["depth_sensor"]
@@ -68,8 +70,6 @@ def main(
             np.save(sim_dir / f"{count}", semantics)
         positions[count] = sim.get_agent(0).state.position
         rotations[count] = sim.get_agent(0).state.rotation
-        count += 1
-        action = actions.pop(0)
     
     np.save(scene_destination_dir / "positions", positions)
     np.save(scene_destination_dir / "rotations", rotations)
