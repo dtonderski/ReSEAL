@@ -34,4 +34,23 @@ def default_sim_cfg() -> CfgNode:
     sim_cfg.HFOV = 90 #deg
 
     return sim_cfg
+
+
+def default_action_module_cfg() -> CfgNode:
+    action_module_cfg = CfgNode()
+    # Config for semantic map preprocessor
+    action_module_cfg.PREPROCESSOR = CfgNode()
+    action_module_cfg.PREPROCESSOR.NAME = "SemanticMapPreprocessor"
+    # Config for global policy
+    action_module_cfg.GLOBAL_POLICY = CfgNode()
+    action_module_cfg.GLOBAL_POLICY.NAME = "GlobalPolicy"
+    # Config for global policy LR schedule
+    action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE = CfgNode()
+    action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE.NAME = "ConstantLR"
+    action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE.INIT_LR = 0.0001
+    # Config for inference
+    action_module_cfg.ACTION_PIPELINE = CfgNode()
+    action_module_cfg.ACTION_PIPELINE.IS_DETERMINISTIC = True
+    action_module_cfg.ACTION_PIPELINE.GLOBAL_POLICY_POLLING_FREQUENCY = 10
+    return action_module_cfg
     
