@@ -11,7 +11,7 @@ def semantic_map_to_label_map(semantic_map: SemanticMap3D, no_object_threshold: 
     semantic_info = semantic_map[:, :, :, 1:]
     semantic_info[semantic_info < no_object_threshold] = 0
     # Do onehot encoding. Because of the sum, this will be 0 only if all semantic labels are below threshold.
-    label_map = np.argmax(semantic_info, axis = -1) + np.any(semantic_info, axis = -1) 
+    label_map = np.argmax(semantic_info, axis = -1) + np.any(semantic_info, axis = -1)
     return label_map
 
 def fill_holes(label_map: LabelMap3D, number_of_voxels_threshold: int,
