@@ -2,12 +2,14 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from nptyping import Float, Int, NDArray, Shape
+from numba import jit
 from yacs.config import CfgNode
 
 from ..utils.datatypes import Coordinate3D, GridIndex3D, SemanticMap3D
 from ..utils.geometric_transformations import coordinates_to_grid_indices
 
 
+@jit(nopython=False, forceobj=True)
 def raytrace_3d(ray_directions: NDArray[Shape["3, NRays"], Float],
                 semantic_map_3d: SemanticMap3D,
                 ray_origin_coords: Union[Coordinate3D, NDArray[Shape["3, NRays"], Float]],
@@ -46,7 +48,8 @@ def raytrace_3d(ray_directions: NDArray[Shape["3, NRays"], Float],
 
     if return_intersections:
         intersections = {ray_index: [(x,y,z)] for ray_index,(x,y,z) in enumerate(zip(x_arr, y_arr, z_arr))}
-
+    else:
+        intersections = {}
     # Store indices of active rays so we don't have to iterate over all of them
     active_ray_mask = np.ones_like(x_arr, dtype=bool)
     # Deactivate rays that have already hit a voxel
