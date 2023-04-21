@@ -16,7 +16,7 @@ def semantic_map_to_label_map(semantic_map: SemanticMap3D, no_object_threshold: 
 
 def fill_holes(label_map: LabelMap3D, number_of_voxels_threshold: int,
                comparator: Callable = operator.le) -> LabelMap3D:
-    # The inverted map will be 1 wherever there is no semantic object. This means that we can use find_objects to find 
+    # The inverted map will be 1 wherever there is no semantic object. This means that we can use find_objects to find
     # holes and fill them.
     inv_map = label_map == 0
 
