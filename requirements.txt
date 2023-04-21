@@ -27,3 +27,4 @@ jaxtyping==0.2.12
 gym==0.21.0
 # open3d for map builder
 open3d==0.17.0
+scikit-learn==1.0.2
