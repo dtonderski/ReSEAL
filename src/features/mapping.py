@@ -1,4 +1,5 @@
-from typing import Tuple, Optional
+from typing import Optional, Tuple
+
 import numpy as np
 import open3d as o3d
 import quaternion  # pylint: disable=unused-import
@@ -6,13 +7,26 @@ from nptyping import Float, Int, NDArray, Shape
 from yacs.config import CfgNode
 
 from ..utils import datatypes
-from ..utils.geometric_transformations import HomogenousTransformFactory
 from ..utils.camera_intrinsic import get_camera_intrinsic_from_cfg
+from ..utils.geometric_transformations import HomogenousTransformFactory
 
 
 class SemanticMap3DBuilder:
+    """Builds a 3D semantic map from a sequence of depth maps and semantic maps.
+    Internally builds a 3D point cloud, which can be accessed via the `point_cloud` property.
+    The point cloud is cropped to the current position of the robot, and a voxel grid (SemanticMap3D) is created
+
+    Args:
+        map_builder_cfg (CfgNode): Semantic map builder configuration, including:
+            - RESOLUTION: Resolution of the voxel grid, in meters per voxel
+            - MAP_SIZE: Size of the 3D semanic map around agent, in meters
+            - NUM_SEMANTIC_CLASSES: Number of semantic classes
+        sim_cfg (CfgNode): Simulation configuration, including:
+            - SENSOR_CFG: Sensor configuration
+    """
+
     def __init__(self, map_builder_cfg: CfgNode, sim_cfg: CfgNode) -> None:
-        self._resolution = map_builder_cfg.RESOLUTION  # m per pixel
+        self._resolution = map_builder_cfg.RESOLUTION  # m per voxel
         self._map_size = np.array(map_builder_cfg.MAP_SIZE)  # map (voxel grid) size in meters
         self._num_semantic_classes = map_builder_cfg.NUM_SEMANTIC_CLASSES
         self._intrinsic = get_camera_intrinsic_from_cfg(sim_cfg.SENSOR_CFG)
@@ -22,34 +36,60 @@ class SemanticMap3DBuilder:
 
     @property
     def point_cloud(self) -> o3d.geometry.PointCloud:
+        """o3d.geometry.PointCloud: Point cloud built from depth maps and semantic maps"""
         return self._point_cloud
 
     @property
     def point_cloud_coordinates(self) -> NDArray[Shape["NumPoints, 3"], Float]:  # type: ignore[name-defined]
+        """NDArray[Shape["NumPoints, 3"], Float]: Point cloud coordinates"""
         return np.asarray(self._point_cloud.points)
 
     # type: ignore[name-defined]
     @property
     def point_cloud_semantic_labels(self) -> NDArray[Shape["NumPoints, NumSemanticClasses"], Int]:
+        """NDArray[Shape["NumPoints, NumSemanticClasses"], Int]: Semantic label of each point in the point cloud
+
+        Note: The order corresponds to the order from `point_cloud_coordinates`
+        """
         return self._point_cloud_semantic_labels
 
     @property
     def semantic_map_3d_map_shape(self) -> Tuple[int, int, int, int]:
+        """Tuple[int, int, int, int]: Shape of the semantic map 3D voxel grid,
+        calculated from `MAP_SIZE` and `RESOLUTION`"""
         map_size = np.round(self._map_size / self._resolution).astype(int) + 1
         return (*map_size, self._num_semantic_classes + 1)  # type: ignore[return-value]
 
     def clear(self) -> None:
+        """Resets the map builder, clearing the point cloud"""
         self._point_cloud.clear()
         self._point_cloud_semantic_labels = np.zeros((0, self._num_semantic_classes))
 
     def update_point_cloud(
         self, semantic_map: datatypes.SemanticMap2D, depth_map: datatypes.DepthMap, pose: datatypes.Pose
     ):
+        """Updates the point cloud from a depth map, semantic map and pose of agent
+
+        Args:
+            semantic_map (datatypes.SemanticMap2D): Semantic map
+            depth_map (datatypes.DepthMap): Depth map
+            pose (datatypes.Pose): Pose of agent, i.e. (position, orientation)
+        """
         point_cloud = self._calculate_point_cloud(depth_map, pose)
         self._point_cloud.points.extend(point_cloud.points)
         self._update_point_cloud_semantic_labels(semantic_map, depth_map)
 
     def get_semantic_map(self, pose: datatypes.Pose) -> datatypes.SemanticMap3D:
+        """Gets the 3D semantic map (voxel grid) around the agent. The map is parallel to the world frame
+
+        Args:
+            pose (datatypes.Pose): Pose of agent, i.e. (position, orientation)
+
+        Returns:
+            datatypes.SemanticMap3D: 3D semantic map (voxel grid) around the agent,
+                with shape (Width, Height, Depth, num_semantic_classes + 1),
+                whereby the first channel of the last dimension is the occupancy channel
+        """
         position, _ = pose
         min_point, max_point = self._calc_semantic_map_bounds(position)
         cropped_point_cloud = self.get_cropped_point_cloud(min_point, max_point)
@@ -66,7 +106,16 @@ class SemanticMap3DBuilder:
 
     def get_cropped_point_cloud(
         self, min_point: datatypes.Coordinate3D, max_point: datatypes.Coordinate3D
-    ) -> o3d.geometry.AxisAlignedBoundingBox:
+    ) -> o3d.geometry.PointCloud:
+        """Gets the point cloud cropped to the given bounds
+
+        Args:
+            min_point (datatypes.Coordinate3D): Minimum point (ie bottom left) of the bounding box
+            max_point (datatypes.Coordinate3D): Maximum point (ie top right) of the bounding box
+
+        Returns:
+            o3d.geometry.PointCloud: Cropped point cloud
+        """
         min_point_arr = np.array(min_point).reshape(3, 1)
         max_point_arr = np.array(max_point).reshape(3, 1)
         return self._point_cloud.crop(o3d.geometry.AxisAlignedBoundingBox(min_point_arr, max_point_arr))
@@ -74,6 +123,17 @@ class SemanticMap3DBuilder:
     def get_closest_semantic_label(
         self, coordinate: datatypes.Coordinate3D, kd_tree: Optional[o3d.geometry.KDTreeFlann] = None
     ) -> datatypes.SemanticLabel:
+        """Gets the closest semantic label to the given coordinate
+
+        Args:
+            coordinate (datatypes.Coordinate3D): Coordinate to get the closest semantic label to
+            kd_tree (o3d.geometry.KDTreeFlann, optional): KDTree used for KNN search.
+                If not provided, one will be created from the current point cloud. This is however time consuming.
+                Defaults to None.
+
+        Returns:
+            datatypes.SemanticLabel: Closest semantic label to the given coordinate
+        """
         if not kd_tree:
             kd_tree = o3d.geometry.KDTreeFlann(self._point_cloud)
         coordinate_arr = np.array(coordinate).reshape(3, 1)
