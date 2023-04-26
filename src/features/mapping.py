@@ -111,6 +111,8 @@ class SemanticMap3DBuilder:
 
     @property
     def semantic_map_3d_map_shape(self) -> Tuple[int, int, int, int]:
+        """Tuple[int, int, int, int]: Shape of the semantic map 3D voxel grid,
+        calculated from `MAP_SIZE` and `RESOLUTION`"""
         map_size = np.round(self._map_size / self._resolution).astype(int) + 1
         return (*map_size, self._num_semantic_classes + 1)  # type: ignore[return-value]
 
