@@ -66,6 +66,7 @@ class SemanticMap3DBuilder:
 
         return self._calculate_map_shape(self._semantic_map_bounds)
 
+    # type: ignore[name-defined]
     @property
     def semantic_map(self) -> datatypes.SemanticMap3D:
         if self._semantic_map is None:
@@ -107,6 +108,11 @@ class SemanticMap3DBuilder:
         if np.any(min_index < 0) or np.any(max_index > self._semantic_map.shape[:-1]):
             raise RuntimeError("Invalid pose (%s, %s, %s)", min_index, max_index, self._semantic_map.shape)
         return map_at_pose
+
+    @property
+    def semantic_map_3d_map_shape(self) -> Tuple[int, int, int, int]:
+        map_size = np.round(self._map_size / self._resolution).astype(int) + 1
+        return (*map_size, self._num_semantic_classes + 1)  # type: ignore[return-value]
 
     def clear(self) -> None:
         """Resets the map builder, clearing the point clouds, the semantic map, and the semantic labels"""
