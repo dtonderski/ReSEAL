@@ -10,6 +10,12 @@ RUN apt-get autoremove -y
 RUN apt-get clean -y
 RUN rm -rf /var/lib/apt/lists/*
 
+# Install gcc for open3d
+RUN apt-get update && apt-get install -y software-properties-common && \
+add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
+apt-get update && apt-get install -y gcc-9 && \
+apt-get upgrade -y libstdc++6
+
 # Configure user
 RUN useradd -G sudo -m ${USERNAME} && \
     echo "${USERNAME} ALL=(root) NOPASSWD:ALL" > "/etc/sudoers.d/${USERNAME}" && \
