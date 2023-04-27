@@ -137,8 +137,13 @@ class SemanticMap3DBuilder:
         if not kd_tree:
             kd_tree = o3d.geometry.KDTreeFlann(self._point_cloud)
         coordinate_arr = np.array(coordinate).reshape(3, 1)
-        _, closest_point, _ = kd_tree.search_knn_vector_3d(coordinate_arr, 1)
-        return self._point_cloud_semantic_labels[closest_point[0], :]
+        radius = np.sqrt(3) * self._resolution
+        _, points_in_radius_idx, _ = kd_tree.search_radius_vector_3d(coordinate_arr, radius)
+        if len(points_in_radius_idx) == 0:
+            return np.zeros(self._num_semantic_classes)
+        points_in_radius = self._point_cloud_semantic_labels[points_in_radius_idx, :]
+        most_confident_label = np.argmax(points_in_radius) // self._num_semantic_classes
+        return points_in_radius[most_confident_label, :]
 
     def _calculate_point_cloud(self, depth_map: datatypes.DepthMap, pose: datatypes.Pose) -> o3d.geometry.PointCloud:
         depth_image = o3d.geometry.Image(depth_map)
