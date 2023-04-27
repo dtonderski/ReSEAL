@@ -127,6 +127,12 @@ class SemanticMap3DBuilder:
         self._semantic_map = None
         self._semantic_map_bounds = None
 
+    def update_kdtree(self) -> None:
+        """Updates the KDTree of the point cloud.
+        Call this before creating semantic map if multiple maps need to be created, as creating the KDTree is expensive
+        """
+        self._kdtree = o3d.geometry.KDTreeFlann(self._point_cloud)
+
     def update_point_cloud(
         self,
         semantic_map: datatypes.SemanticMap2D,
@@ -135,6 +141,8 @@ class SemanticMap3DBuilder:
     ):
         """Updates the point cloud from a depth map, semantic map and pose of agent. Adds the points to the temporary
         point cloud, and the semantic labels to the temporary semantic labels list.
+
+        NOTE: This does not update the KDTree
 
         Args:
             semantic_map (datatypes.SemanticMap2D): Semantic map
