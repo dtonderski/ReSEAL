@@ -1,14 +1,14 @@
 import json
+import pickle
 from pathlib import Path
-from PIL import Image
 
 import numpy as np
 import quaternion  # type: ignore # pylint: disable=unused-import
 from habitat_sim.simulator import ObservationDict
 from PIL import Image
 
-from src.data import scene
 from src.config import default_data_paths_cfg
+from src.data import scene
 
 
 def main() -> None:
@@ -75,7 +75,6 @@ def main() -> None:
         # Save positions and rotations
         np.save(scene_destination_dir / "positions", positions)
         np.save(scene_destination_dir / "rotations", rotations)
-        
 
 if __name__ == '__main__':
     main()
