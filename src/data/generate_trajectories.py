@@ -74,9 +74,7 @@ def main() -> None:
 
         # Save positions and rotations
         np.save(scene_destination_dir / "positions", positions)
-
-        with (scene_destination_dir / "rotations.pkl").open("wb") as file:
-            pickle.dump(rotations, file)
+        np.save(scene_destination_dir / "rotations", rotations)
 
 if __name__ == '__main__':
     main()
