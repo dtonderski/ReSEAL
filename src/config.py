@@ -41,7 +41,7 @@ def default_sensor_cfg() -> CfgNode:
     sensor_cfg.HEIGHT = 256 #px
     sensor_cfg.HFOV = 90 #deg
     sensor_cfg.SENSOR_HEIGHT = 0.88 #m
-    sensor_cfg.ORTHO_SCALE = 0.01 #m/px
+    sensor_cfg.ORTHO_SCALE = 0.1 #m/px
     return sensor_cfg
 
 def default_action_module_cfg() -> CfgNode:

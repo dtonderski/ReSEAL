@@ -5,6 +5,7 @@ import numpy as np
 from fire import Fire
 from habitat_sim.simulator import ObservationDict
 from PIL import Image
+from tqdm import trange
 
 from src import config
 from src.data import filepath, scene
@@ -65,7 +66,7 @@ def main(
 
     # Run simulation
     count = 0
-    while count < max_num_steps:
+    for count in trange(max_num_steps):
         if goal_position:
             action = greedy_policy(goal_position)
         elif use_random_policy:
@@ -87,8 +88,6 @@ def main(
             np.save(data_paths.semantic_dir / f"{count}", semantics)
         positions[count] = sim.get_agent(0).state.position
         rotations[count] = sim.get_agent(0).state.rotation
-
-        count += 1
 
     # Save output
     np.save(data_paths.positions_filepath, positions)
