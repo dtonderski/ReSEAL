@@ -108,8 +108,9 @@ class SemanticMap3DBuilder:
             voxel_coordinate = voxel_grid.get_voxel_center_coordinate(voxel.grid_index)
             closest_semantic_label = self.get_closest_semantic_label(tuple(voxel_coordinate))  # type: ignore[arg-type]
             x, y, z = voxel.grid_index  # pylint: disable=invalid-name
-            semantic_map[x, y, z, 0] = 1
-            semantic_map[x, y, z, 1:] = closest_semantic_label
+            # To transform back to habitat coords, we have to flip y and z axis. But we keep y point up
+            semantic_map[x, y, -z, 0] = 1
+            semantic_map[x, y, -z, 1:] = closest_semantic_label
         return semantic_map
 
     def get_cropped_point_cloud(
@@ -151,28 +152,12 @@ class SemanticMap3DBuilder:
 
     def _calculate_point_cloud(self, depth_map: datatypes.DepthMap, pose: datatypes.Pose) -> o3d.geometry.PointCloud:
         depth_image = o3d.geometry.Image(depth_map)
-        # Flip x axis of position vector. Why? No idea
-        translation_vector, rotation_quaternion = pose
-        translation_vector = (
-            np.array(
-                [
-                    [-1, 0, 0],
-                    [0, 1, 0],
-                    [0, 0, 1],
-                ]
-            )
-            @ translation_vector
-        )
-        extrinsic = HomogenousTransformFactory.from_pose(
-            (translation_vector, rotation_quaternion), translate_first=False
-        )
+        world_to_agent = HomogenousTransformFactory.from_pose(pose, True)  # in habiat, z-axis is to the back of agent
+        world_to_camera = world_to_agent @ HomogenousTransformFactory.rotate_180_about_x()  # in open3d, z-axis is to the front of camera
+        extrinsic = np.linalg.inv(world_to_camera)
         point_cloud = o3d.geometry.PointCloud.create_from_depth_image(
             depth_image, self._intrinsic, extrinsic, project_valid_depth_only=True
         )
-        # Flip along y axis
-        flip_along_y_axis = np.eye(4)
-        flip_along_y_axis[1, 1] = -1
-        point_cloud = point_cloud.transform(flip_along_y_axis)
         return point_cloud
 
     def _update_point_cloud_semantic_labels(self, semantic_map: datatypes.SemanticMap2D, depth_map: datatypes.DepthMap):
@@ -186,11 +171,6 @@ class SemanticMap3DBuilder:
     def _calc_valid_pixel_indices(self, depth_map: datatypes.DepthMap) -> NDArray[Shape["NumValidPixels, 1"], Int]:
         depth_map_flat = depth_map.reshape(-1, 1)
         return np.argwhere(depth_map_flat > 0)[:, 0]
-
-    def _flip_point_cloud_along_y_axis(self):
-        transformation = np.eye(4)
-        transformation[1, 1] = -1
-        self._point_cloud.transform(transformation)
 
     def _calc_semantic_map_bounds(
         self, position: datatypes.TranslationVector
