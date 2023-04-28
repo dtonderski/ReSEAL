@@ -34,6 +34,14 @@ class GenerateTrajectoryFilepaths:
         return self.trajectory_output_dir / "Semantic"
 
     @property
+    def voxel_grid_dir(self) -> Path:
+        return self.trajectory_output_dir / "Voxel_Grid"
+
+    @property
+    def top_down_semantic_map_dir(self) -> Path:
+        return self.trajectory_output_dir / "Top_Down_Semantic_Map"
+
+    @property
     def navmesh_filepath(self) -> Path:
         return (
             Path(self.data_paths_cfg.RAW_DATA_DIR)
