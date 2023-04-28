@@ -108,7 +108,7 @@ def propagate_labels(sensor_rotation: np.quaternion,                            
     ray_directions_flat = ray_directions.reshape(3, -1)
 
     ray_labels, _ = raytrace_3d(ray_directions_flat, semantic_map_3d, sensor_position, grid_index_of_origin,
-                              sim_cfg, False)
+                              sim_cfg)
 
     return ray_labels_to_semantic_map_2d(ray_labels, sim_cfg.SENSOR_CFG)
 
