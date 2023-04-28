@@ -21,16 +21,33 @@ Run the following command in `vscode` to build the container and start developin
 Dev Containers: Rebuild and Reopen in Container
 ```
 # Data
+## Downloading HM3D dataset
 To download the data, run:
 ```
 conda activate habitat
 sh tools/get_data.sh
 ```
-This will prompt you for your Matterport API token ID and secret API token (the latter will not be shown on screen). After the download is finished, generate example trajectories by running:
+This will prompt you for your Matterport API token ID and secret API token (the latter will not be shown on screen).
+
+## Generating trajctories
+To generate trajectories, use the following script:
 ```
-python src/data/generate_trajectories.py
+python src/scripts/generate_trajectories.py
 ```
-These will be saved to data/interim/trajectories/train.
+* `--scene-name`: e.g. "train/00000-kfPV7w3FaU5"
+* `--start-position`: Initial location of the agent, in (x, y, z). E.g. "[-0.6, 1.2, 0.0]"
+* `--max-num-steps`: Maximum number of steps/commands in integer
+* `--goal-position`: Coordinate of goal position in (x, y, z)
+* `--use-random-policy`: flag for using random policy instead of goal position
+* `--commands-file`: Path to `json` file with list of agent commands. E.g. "config/trajectories.json"
+
+These will be saved to `data/interim/trajectories/{scene_name}`.
+
+## Generate 3D map
+Run the following command to generate, 3D semantic maps and top down view of the map
+```
+python src/scripts/generate_semantic_map_3d.py --scene-name train/00000-kfPV7w3FaU5 --num-steps 50
+```
 # Repository strucutre
 The repository is structure according to the template in [[link]](https://towardsdatascience.com/structuring-machine-learning-projects-be473775a1b6) and inspired by [[Cookiecutter Data Science]](https://drivendata.github.io/cookiecutter-data-science/)
 
