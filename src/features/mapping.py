@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Tuple
 
 import numpy as np
 import open3d as o3d
@@ -33,6 +33,7 @@ class SemanticMap3DBuilder:
         # Initialize point cloud
         self._point_cloud = o3d.geometry.PointCloud()
         self._point_cloud_semantic_labels = np.zeros((0, self._num_semantic_classes))
+        self._kdtree = o3d.geometry.KDTreeFlann(self._point_cloud)
 
     @property
     def point_cloud(self) -> o3d.geometry.PointCloud:
@@ -65,10 +66,18 @@ class SemanticMap3DBuilder:
         self._point_cloud.clear()
         self._point_cloud_semantic_labels = np.zeros((0, self._num_semantic_classes))
 
+    def update_kdtree(self) -> None:
+        """Updates the KDTree of the point cloud.
+        Call this before creating semantic map if multiple maps need to be created, as creating the KDTree is expensive
+        """
+        self._kdtree = o3d.geometry.KDTreeFlann(self._point_cloud)
+
     def update_point_cloud(
         self, semantic_map: datatypes.SemanticMap2D, depth_map: datatypes.DepthMap, pose: datatypes.Pose
     ):
         """Updates the point cloud from a depth map, semantic map and pose of agent
+
+        NOTE: This does not update the KDTree
 
         Args:
             semantic_map (datatypes.SemanticMap2D): Semantic map
@@ -95,13 +104,13 @@ class SemanticMap3DBuilder:
         cropped_point_cloud = self.get_cropped_point_cloud(min_point, max_point)
         voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(cropped_point_cloud, self._resolution)
         semantic_map = np.zeros(self.semantic_map_3d_map_shape)
-        kd_tree = o3d.geometry.KDTreeFlann(self._point_cloud)
         for voxel in voxel_grid.get_voxels():
             voxel_coordinate = voxel_grid.get_voxel_center_coordinate(voxel.grid_index)
-            closest_semantic_label = self.get_closest_semantic_label(tuple(voxel_coordinate), kd_tree)  # type: ignore[arg-type]
-            x, y, z = voxel.grid_index
-            semantic_map[x, y, z, 0] = 1
-            semantic_map[x, y, z, 1:] = closest_semantic_label
+            closest_semantic_label = self.get_closest_semantic_label(tuple(voxel_coordinate))  # type: ignore[arg-type]
+            x, y, z = voxel.grid_index  # pylint: disable=invalid-name
+            # To transform back to habitat coords, we have to flip y and z axis. But we keep y point up
+            semantic_map[x, y, -z, 0] = 1
+            semantic_map[x, y, -z, 1:] = closest_semantic_label
         return semantic_map
 
     def get_cropped_point_cloud(
@@ -120,9 +129,7 @@ class SemanticMap3DBuilder:
         max_point_arr = np.array(max_point).reshape(3, 1)
         return self._point_cloud.crop(o3d.geometry.AxisAlignedBoundingBox(min_point_arr, max_point_arr))
 
-    def get_closest_semantic_label(
-        self, coordinate: datatypes.Coordinate3D, kd_tree: Optional[o3d.geometry.KDTreeFlann] = None
-    ) -> datatypes.SemanticLabel:
+    def get_closest_semantic_label(self, coordinate: datatypes.Coordinate3D) -> datatypes.SemanticLabel:
         """Gets the closest semantic label to the given coordinate
 
         Args:
@@ -134,11 +141,9 @@ class SemanticMap3DBuilder:
         Returns:
             datatypes.SemanticLabel: Closest semantic label to the given coordinate
         """
-        if not kd_tree:
-            kd_tree = o3d.geometry.KDTreeFlann(self._point_cloud)
         coordinate_arr = np.array(coordinate).reshape(3, 1)
         radius = np.sqrt(3) * self._resolution
-        _, points_in_radius_idx, _ = kd_tree.search_radius_vector_3d(coordinate_arr, radius)
+        _, points_in_radius_idx, _ = self._kdtree.search_radius_vector_3d(coordinate_arr, radius)
         if len(points_in_radius_idx) == 0:
             return np.zeros(self._num_semantic_classes)
         points_in_radius = self._point_cloud_semantic_labels[points_in_radius_idx, :]
@@ -147,28 +152,12 @@ class SemanticMap3DBuilder:
 
     def _calculate_point_cloud(self, depth_map: datatypes.DepthMap, pose: datatypes.Pose) -> o3d.geometry.PointCloud:
         depth_image = o3d.geometry.Image(depth_map)
-        # Flip x axis of position vector. Why? No idea
-        translation_vector, rotation_quaternion = pose
-        translation_vector = (
-            np.array(
-                [
-                    [-1, 0, 0],
-                    [0, 1, 0],
-                    [0, 0, 1],
-                ]
-            )
-            @ translation_vector
-        )
-        extrinsic = HomogenousTransformFactory.from_pose(
-            (translation_vector, rotation_quaternion), translate_first=False
-        )
+        world_to_agent = HomogenousTransformFactory.from_pose(pose, True)  # in habiat, z-axis is to the back of agent
+        world_to_camera = world_to_agent @ HomogenousTransformFactory.rotate_180_about_x()  # in open3d, z-axis is to the front of camera
+        extrinsic = np.linalg.inv(world_to_camera)
         point_cloud = o3d.geometry.PointCloud.create_from_depth_image(
             depth_image, self._intrinsic, extrinsic, project_valid_depth_only=True
         )
-        # Flip along y axis
-        flip_along_y_axis = np.eye(4)
-        flip_along_y_axis[1, 1] = -1
-        point_cloud = point_cloud.transform(flip_along_y_axis)
         return point_cloud
 
     def _update_point_cloud_semantic_labels(self, semantic_map: datatypes.SemanticMap2D, depth_map: datatypes.DepthMap):
@@ -182,11 +171,6 @@ class SemanticMap3DBuilder:
     def _calc_valid_pixel_indices(self, depth_map: datatypes.DepthMap) -> NDArray[Shape["NumValidPixels, 1"], Int]:
         depth_map_flat = depth_map.reshape(-1, 1)
         return np.argwhere(depth_map_flat > 0)[:, 0]
-
-    def _flip_point_cloud_along_y_axis(self):
-        transformation = np.eye(4)
-        transformation[1, 1] = -1
-        self._point_cloud.transform(transformation)
 
     def _calc_semantic_map_bounds(
         self, position: datatypes.TranslationVector
