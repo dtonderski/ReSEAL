@@ -23,6 +23,10 @@ def default_data_paths_cfg() -> CfgNode:
     data_paths_cfg.INTERIM_DATA_DIR = str(Path("data", "interim"))
     data_paths_cfg.TRAJECTORIES_DIR = str(Path(data_paths_cfg.INTERIM_DATA_DIR, "trajectories"))
 
+    data_paths_cfg.HM3DSEM_MAPPING_PATH = str(Path(data_paths_cfg.RAW_DATA_DIR, "hm3dsem_category_mappings.tsv"))
+    data_paths_cfg.MATTERPORT_MAPPING_PATH = str(Path(data_paths_cfg.RAW_DATA_DIR, "mpcat40.tsv"))
+    data_paths_cfg.MATTERPORT_TO_RESEAL_MAPPING_PATH = str(Path(data_paths_cfg.RAW_DATA_DIR, "mpcat40_to_reseal.tsv"))
+    data_paths_cfg.RESEAL_MAPPING_PATH = str(Path(data_paths_cfg.RAW_DATA_DIR, "reseal.tsv"))
     return data_paths_cfg
 
 
