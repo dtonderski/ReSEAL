@@ -1,3 +1,33 @@
+from typing import Callable
+
+import numpy as np
+from nptyping import Int, NDArray, Shape
+
 
 def sorted_dict_by_value(dictionary):
-    return {k: v for k, v in sorted(dictionary.items(), key=lambda item: item[1])}
+    return dict(sorted(dictionary.items(), key=lambda item: item[1]))
+
+def get_semantic_map(
+        saved_semantics: NDArray[Shape["Height, Width"], Int],
+        scene_index_to_category_index_map: Callable,
+        num_semantic_classes: int
+    ) -> NDArray[Shape["Height, Width, NumSemanticClasses"], Int]:
+    """ Function to get semantic map from saved semantics. It first converts the saved semantics to the category \
+        indices by running the scene_index_to_category_index_map function on the saved semantics. Then, it converts to \
+        a one-hot encoding and discards the channel corresponding to index 0. In matterport, this is void, in reseal, \
+        it is unlabeled, and in maskrcnn, it isn't used.
+
+    Args:
+        saved_semantics (NDArray[Shape["Height, Width"], Int]): saved semantics from the simulator.
+        scene_index_to_category_index_map (Callable): function to convert scene indices to category indices.
+        num_semantic_classes (int): number of semantic classes in the new category mapping.
+
+    Returns:
+        NDArray[Shape["Height, Width, NumSemanticClasses"], Int]: one-hot encoded semantic map using the new category \
+            mapping.
+    """
+    semantic_map_reseal_indices = scene_index_to_category_index_map(saved_semantics)
+    semantic_map = np.zeros((saved_semantics.size, num_semantic_classes + 1))
+    semantic_map[np.arange(semantic_map_reseal_indices.size), semantic_map_reseal_indices.flatten()] = 1
+    semantic_map = semantic_map.reshape(saved_semantics.shape + (num_semantic_classes + 1,))[:,:,1:]
+    return semantic_map
