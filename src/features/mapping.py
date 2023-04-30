@@ -10,7 +10,6 @@ from ..utils import datatypes
 from ..utils.camera_intrinsic import get_camera_intrinsic_from_cfg
 from ..utils.geometric_transformations import HomogenousTransformFactory, coordinates_to_grid_indices
 
-
 class SemanticMap3DBuilder:
     """Builds a 3D semantic map from a sequence of depth maps and semantic maps. New information is added using the
     `update_point_cloud` method, and the semantic map is updated using the `update_semantic_map` method. The semantic
@@ -148,6 +147,10 @@ class SemanticMap3DBuilder:
             semantic_map (datatypes.SemanticMap2D): Semantic map
             depth_map (datatypes.DepthMap): Depth map
             pose (datatypes.Pose): Pose of agent, i.e. (position, orientation)
+            fast (bool, optional): If used, the semantic numpy array is not updated in this iteration, but instead \
+                stored in a list. This is faster, but requires a call to 'concatenate_semantics' before the semantic \
+                information is used. Only use if you do not plan to use the semantic information in this iteration. \
+                Defaults to False.
         """
         point_cloud = self._calculate_point_cloud(depth_map, pose)
         self._temporary_point_cloud = np.concatenate([self._temporary_point_cloud, point_cloud])
