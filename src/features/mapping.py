@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List
 
 import numpy as np
 import open3d as o3d
@@ -9,7 +9,6 @@ from yacs.config import CfgNode
 from ..utils import datatypes
 from ..utils.camera_intrinsic import get_camera_intrinsic_from_cfg
 from ..utils.geometric_transformations import HomogenousTransformFactory
-
 
 class SemanticMap3DBuilder:
     """Builds a 3D semantic map from a sequence of depth maps and semantic maps.
@@ -33,6 +32,7 @@ class SemanticMap3DBuilder:
         # Initialize point cloud
         self._point_cloud = o3d.geometry.PointCloud()
         self._point_cloud_semantic_labels = np.zeros((0, self._num_semantic_classes))
+        self._point_cloud_semantic_labels_list: List = []
         self._kdtree = o3d.geometry.KDTreeFlann(self._point_cloud)
 
     @property
@@ -73,7 +73,8 @@ class SemanticMap3DBuilder:
         self._kdtree = o3d.geometry.KDTreeFlann(self._point_cloud)
 
     def update_point_cloud(
-        self, semantic_map: datatypes.SemanticMap2D, depth_map: datatypes.DepthMap, pose: datatypes.Pose
+        self, semantic_map: datatypes.SemanticMap2D, depth_map: datatypes.DepthMap, pose: datatypes.Pose,
+        fast: bool = False
     ):
         """Updates the point cloud from a depth map, semantic map and pose of agent
 
@@ -83,10 +84,14 @@ class SemanticMap3DBuilder:
             semantic_map (datatypes.SemanticMap2D): Semantic map
             depth_map (datatypes.DepthMap): Depth map
             pose (datatypes.Pose): Pose of agent, i.e. (position, orientation)
+            fast (bool, optional): If used, the semantic numpy array is not updated in this iteration, but instead \
+                stored in a list. This is faster, but requires a call to 'concatenate_semantics' before the semantic \
+                information is used. Only use if you do not plan to use the semantic information in this iteration. \
+                Defaults to False.
         """
         point_cloud = self._calculate_point_cloud(depth_map, pose)
         self._point_cloud.points.extend(point_cloud.points)
-        self._update_point_cloud_semantic_labels(semantic_map, depth_map)
+        self._update_point_cloud_semantic_labels(semantic_map, depth_map, fast)
 
     def get_semantic_map(self, pose: datatypes.Pose) -> datatypes.SemanticMap3D:
         """Gets the 3D semantic map (voxel grid) around the agent. The map is parallel to the world frame
@@ -129,6 +134,14 @@ class SemanticMap3DBuilder:
         max_point_arr = np.array(max_point).reshape(3, 1)
         return self._point_cloud.crop(o3d.geometry.AxisAlignedBoundingBox(min_point_arr, max_point_arr))
 
+    def concatenate_semantics(self):
+        """ Concatenates the semantic labels stored in the list to the semantic labels array, and clears the list.
+        """
+        self._point_cloud_semantic_labels = np.concatenate(
+            [self._point_cloud_semantic_labels, *self._point_cloud_semantic_labels_list]
+        )
+        _point_cloud_semantic_labels_list = []
+
     def get_closest_semantic_label(self, coordinate: datatypes.Coordinate3D) -> datatypes.SemanticLabel:
         """Gets the closest semantic label to the given coordinate
 
@@ -160,12 +173,26 @@ class SemanticMap3DBuilder:
         )
         return point_cloud
 
-    def _update_point_cloud_semantic_labels(self, semantic_map: datatypes.SemanticMap2D, depth_map: datatypes.DepthMap):
+    def _update_point_cloud_semantic_labels(self, semantic_map: datatypes.SemanticMap2D, depth_map: datatypes.DepthMap,
+                                            fast: bool = False) -> None:
+        """_summary_
+
+        Args:
+            semantic_map (datatypes.SemanticMap2D): _description_
+            depth_map (datatypes.DepthMap): _description_
+            fast (bool, optional): If used, the semantic numpy array is not updated in this iteration, but instead \
+                stored in a list. This is faster, but requires a call to 'concatenate_semantics' before the semantic \
+                information is used. Only use if you do not plan to use the semantic information in this iteration. \
+                Defaults to False.
+        """
         valid_pixel_indices = self._calc_valid_pixel_indices(depth_map).flatten()
         semantic_map_flat = semantic_map.reshape(-1, self._num_semantic_classes)
-        self._point_cloud_semantic_labels = np.concatenate(
-            (self._point_cloud_semantic_labels, semantic_map_flat[valid_pixel_indices, :])
-        )
+        if fast:
+            self._point_cloud_semantic_labels_list.append(semantic_map_flat[valid_pixel_indices, :])
+        else:
+            self._point_cloud_semantic_labels = np.concatenate(
+                (self._point_cloud_semantic_labels, semantic_map_flat[valid_pixel_indices, :])
+            )
 
     # type: ignore[name-defined]
     def _calc_valid_pixel_indices(self, depth_map: datatypes.DepthMap) -> NDArray[Shape["NumValidPixels, 1"], Int]:
