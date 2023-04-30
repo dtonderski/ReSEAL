@@ -105,7 +105,7 @@ class SemanticMap3DBuilder:
                 whereby the first channel of the last dimension is the occupancy channel
         """
         position, _ = pose
-        min_point, max_point = self._calc_semantic_map_bounds(position)
+        min_point, max_point = self.calc_semantic_map_bounds(position)
         cropped_point_cloud = self.get_cropped_point_cloud(min_point, max_point)
         voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(cropped_point_cloud, self._resolution)
         semantic_map = np.zeros(self.semantic_map_3d_map_shape)
@@ -199,9 +199,17 @@ class SemanticMap3DBuilder:
         depth_map_flat = depth_map.reshape(-1, 1)
         return np.argwhere(depth_map_flat > 0)[:, 0]
 
-    def _calc_semantic_map_bounds(
+    def calc_semantic_map_bounds(
         self, position: datatypes.TranslationVector
     ) -> Tuple[datatypes.Coordinate3D, datatypes.Coordinate3D]:
         min_point = position - self._map_size / 2
         max_point = position + self._map_size / 2
+        # Shifting the points so that voxel wall coordinates are divisible by the resolution simplifies raytracing
+        min_shift = min_point % self._resolution
+        min_point = min_point - min_shift
+        max_point = max_point - min_shift
+        # The above is enough if _map_size is divisible by _resolution. If not, we have to shift the max point too. 
+        max_shift = min_point % self._resolution
+        max_point = max_point - max_shift
+        
         return tuple(min_point), tuple(max_point)  # type: ignore[return-value]
