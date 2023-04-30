@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 import quaternion
 from nptyping import Float, Int, NDArray, Shape
@@ -72,10 +74,11 @@ def get_ray_directions_world_coords(sensor_rotation: np.quaternion, #type: ignor
 
 
 def propagate_labels(sensor_rotation: np.quaternion,                                        #type: ignore[name-defined]
-                     sensor_position: Coordinate3D,
+                     sensor_position: Union[Coordinate3D, NDArray[Shape["3"], Float]],
                      semantic_map_3d: SemanticMap3D,
                      grid_index_of_origin: GridIndex3D,
-                     sim_cfg: CfgNode) -> SemanticMap2D:
+                     map_builder_cfg: CfgNode,
+                     sensor_cfg: CfgNode) -> SemanticMap2D:
     """_summary_
 
     Args:
@@ -84,20 +87,23 @@ def propagate_labels(sensor_rotation: np.quaternion,                            
         sensor_position (Coordinate3D): 3d coordinates of the sensor position, which will be the origin of the rays
         semantic_map_3d (SemanticMap3D): semantic map of the scene.
         grid_index_of_origin (GridIndex3D): grid index of the origin of the scene.
-        sim_cfg (CfgNode): simulation config, must contain RESOLUTION and SENSOR_CFG, and sim_cfg.SENSOR_CFG \
-            must contain WIDTH, HEIGHT, HFOV
+        map_builder_cfg (CfgNode): map builder config, must contain RESOLUTION.
+        sensor_cfg (CfgNode): sensor config, must contain WIDTH, HEIGHT, HFOV.
 
     Returns:
         SemanticMap2D: semantic 2d map of the scene from the viewpoint of the sensor.
     """
-    ray_directions = get_ray_directions_world_coords(sensor_rotation, sim_cfg.SENSOR_CFG)
+    ray_directions = get_ray_directions_world_coords(sensor_rotation, sensor_cfg)
 
     ray_directions_flat = ray_directions.reshape(3, -1)
 
-    ray_labels, _ = raytrace_3d(ray_directions_flat, semantic_map_3d, sensor_position, grid_index_of_origin,
-                              sim_cfg)
+    if isinstance(sensor_position, np.ndarray):
+        sensor_position = tuple(sensor_position) #type: ignore[assignment]
 
-    return ray_labels_to_semantic_map_2d(ray_labels, sim_cfg.SENSOR_CFG)
+    ray_labels, _ = raytrace_3d(ray_directions_flat, semantic_map_3d, sensor_position, grid_index_of_origin,
+                                map_builder_cfg)
+
+    return ray_labels_to_semantic_map_2d(ray_labels, sensor_cfg)
 
 def ray_labels_to_semantic_map_2d(ray_labels: NDArray[Shape["NRays, NChannels"], Int],
                                    sensor_cfg: CfgNode) -> SemanticMap2D:

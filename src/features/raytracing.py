@@ -1,7 +1,7 @@
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
-from nptyping import Float, Int, NDArray, Shape, Bool
+from nptyping import Bool, Float, Int, NDArray, Shape
 from numba import jit
 from yacs.config import CfgNode
 
@@ -104,7 +104,7 @@ def raytrace_3d(ray_directions: NDArray[Shape["3, NRays"], Float],
                 semantic_map_3d: SemanticMap3D,
                 ray_origin_coords: Union[Coordinate3D, NDArray[Shape["3, NRays"], Float]],
                 grid_index_of_origin: GridIndex3D,
-                sim_cfg: CfgNode) \
+                map_builder_cfg: CfgNode) \
                 -> Tuple[NDArray[Shape["NRays, NChannels"], Int],                     # type: ignore[name-defined]
                          Dict[int, List[Tuple[float, float, float]]]]:
     """Traces rays through a 3D semantic map until they hit a voxel, and returns the class of the voxel they hit.
@@ -116,7 +116,7 @@ def raytrace_3d(ray_directions: NDArray[Shape["3, NRays"], Float],
             coordinates of the origin of all rays, or an array of shape (NRays, 3) containing the coordinates of the \
             origin of each ray.
         grid_index_of_origin (GridIndex3D): grid index of the origin of the scene.
-        sim_cfg (CfgNode): configuration of the current scene, must contain RESOLUTION.
+        map_builder_cfg (CfgNode): configuration of the current map builder, must contain RESOLUTION.
 
     Returns:
         ray_labels (NDArray[Shape[NRays, NChannels], Int]): If ray i hits a voxel which in the semantic 3d map is \
@@ -132,7 +132,7 @@ def raytrace_3d(ray_directions: NDArray[Shape["3, NRays"], Float],
     x_arr, y_arr, z_arr, i_arr, j_arr, k_arr = get_ray_origin_coords_and_indices(ray_origin_coords,
                                                                                  grid_index_of_origin,
                                                                                  ray_directions,
-                                                                                 sim_cfg)
+                                                                                 map_builder_cfg)
 
     intersections = {ray_index: [(x,y,z)] for ray_index,(x,y,z) in enumerate(zip(x_arr, y_arr, z_arr))}
 
@@ -147,7 +147,7 @@ def raytrace_3d(ray_directions: NDArray[Shape["3, NRays"], Float],
     # Iterate until all rays have hit a voxel
     while active_ray_indices.size:
         x_arr, y_arr, z_arr, i_arr, j_arr, k_arr, active_ray_mask, active_ray_indices = (
-            advance_rays(x_arr, y_arr, z_arr, i_arr, j_arr, k_arr, sim_cfg.RESOLUTION, grid_index_of_origin, 
+            advance_rays(x_arr, y_arr, z_arr, i_arr, j_arr, k_arr, map_builder_cfg.RESOLUTION, grid_index_of_origin, 
                          ray_directions, active_ray_mask, active_ray_indices, occupancy_grid))
 
     # Store the intersection points if requested
@@ -164,7 +164,7 @@ def raytrace_3d(ray_directions: NDArray[Shape["3, NRays"], Float],
 def get_ray_origin_coords_and_indices(ray_origin_coords: Union[Coordinate3D, NDArray[Shape["3, NRays"], Float]],
                                       grid_index_of_origin,
                                       ray_directions_normalized,
-                                      sim_cfg: CfgNode) -> Tuple[NDArray[Shape["*"], Float],
+                                      map_builder_cfg: CfgNode) -> Tuple[NDArray[Shape["*"], Float],
                                                                  NDArray[Shape["*"], Float],
                                                                  NDArray[Shape["*"], Float],
                                                                  NDArray[Shape["*"], Int],
@@ -179,7 +179,7 @@ def get_ray_origin_coords_and_indices(ray_origin_coords: Union[Coordinate3D, NDA
         grid_index_of_origin (GridIndex3D): grid index of the origin of the scene.
         ray_directions_normalized (NDArray[Shape["NRays, 3"], Float]): array containing the normalized x,y,z directions
             of each ray.
-        sim_cfg (CfgNode): configuration of the current scene, must contain RESOLUTION.
+        map_builder_cfg (CfgNode): configuration of the current map builder, must contain RESOLUTION.
 
     Returns:
         x_arr (NDArray[Shape["NRays"], Float]): x-coordinates of the origin of each ray.
@@ -203,7 +203,7 @@ def get_ray_origin_coords_and_indices(ray_origin_coords: Union[Coordinate3D, NDA
     z_arr = ray_origin_coords_array[2]
 
     ray_origin_indices = coordinates_to_grid_indices(ray_origin_coords_array.T, grid_index_of_origin,
-                                                     sim_cfg.RESOLUTION).T
+                                                     map_builder_cfg.RESOLUTION).T
 
     i_arr = ray_origin_indices[0]
     j_arr = ray_origin_indices[1]
@@ -222,7 +222,7 @@ def raytrace_3d_from_angles(theta: NDArray[Shape["NRays"], Float],              
                             semantic_map_3d: SemanticMap3D,
                             ray_origin_coords: Union[Coordinate3D, NDArray[Shape["3, NRays"], Float]],
                             grid_index_of_origin: GridIndex3D,
-                            sim_cfg: CfgNode) \
+                            map_builder_cfg: CfgNode) \
                             -> Tuple[NDArray[Shape["NRays, NChannels"], Int],               # type: ignore[name-defined]
                                      Dict[int, List[Tuple[float, float, float]]]]:
     """Traces rays through a 3D semantic map until they hit a voxel, and returns the class of the voxel they hit.
@@ -235,7 +235,7 @@ def raytrace_3d_from_angles(theta: NDArray[Shape["NRays"], Float],              
             coordinates of the origin of all rays, or an array of shape (NRays, 3) containing the coordinates of the \
             origin of each ray.
         grid_index_of_origin (GridIndex3D): grid index of the origin of the scene.
-        sim_cfg (CfgNode): configuration of the current scene, must contain RESOLUTION.
+        map_builder_cfg (CfgNode): configuration of the current map_builder, must contain RESOLUTION.
 
     Returns:
         ray_classes (NDArray[Shape[NRays], Int]): The class of each ray, equal to the class of the first voxel it hits \
@@ -250,4 +250,4 @@ def raytrace_3d_from_angles(theta: NDArray[Shape["NRays"], Float],              
 
     ray_directions = np.stack((ray_x_direction, ray_y_direction, ray_z_direction), axis = 0)
 
-    return raytrace_3d(ray_directions, semantic_map_3d, ray_origin_coords, grid_index_of_origin, sim_cfg)
+    return raytrace_3d(ray_directions, semantic_map_3d, ray_origin_coords, grid_index_of_origin, map_builder_cfg)
