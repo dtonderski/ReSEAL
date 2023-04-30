@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 from nptyping import Bool, Float, Int, NDArray, Shape
