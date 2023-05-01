@@ -67,6 +67,7 @@ class SemanticMap3DBuilder:
         """Resets the map builder, clearing the point cloud"""
         self._point_cloud.clear()
         self._point_cloud_semantic_labels = np.zeros((0, self._num_semantic_classes))
+        self._point_cloud_semantic_labels_list.clear()
 
     def update_kdtree(self) -> None:
         """Updates the KDTree of the point cloud.
@@ -224,7 +225,7 @@ class SemanticMap3DBuilder:
         self._point_cloud_semantic_labels = np.concatenate(
             [self._point_cloud_semantic_labels, *self._point_cloud_semantic_labels_list]
         )
-        self._point_cloud_semantic_labels_list = []
+        self._point_cloud_semantic_labels_list.clear()
 
     def get_closest_semantic_label(self, coordinate: datatypes.Coordinate3D) -> datatypes.SemanticLabel:
         """Gets the closest semantic label to the given coordinate
