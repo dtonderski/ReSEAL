@@ -140,7 +140,7 @@ class SemanticMap3DBuilder:
         self._point_cloud_semantic_labels = np.concatenate(
             [self._point_cloud_semantic_labels, *self._point_cloud_semantic_labels_list]
         )
-        _point_cloud_semantic_labels_list = []
+        self._point_cloud_semantic_labels_list = []
 
     def get_closest_semantic_label(self, coordinate: datatypes.Coordinate3D) -> datatypes.SemanticLabel:
         """Gets the closest semantic label to the given coordinate
