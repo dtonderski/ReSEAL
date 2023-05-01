@@ -1,14 +1,16 @@
-from typing import Tuple, List
+from typing import List, Tuple
 
 import numpy as np
 import open3d as o3d
 import quaternion  # pylint: disable=unused-import
 from nptyping import Float, Int, NDArray, Shape
+from numba import njit, jit
 from yacs.config import CfgNode
 
 from ..utils import datatypes
 from ..utils.camera_intrinsic import get_camera_intrinsic_from_cfg
-from ..utils.geometric_transformations import HomogenousTransformFactory
+from ..utils.geometric_transformations import HomogenousTransformFactory, coordinates_to_grid_indices
+
 
 class SemanticMap3DBuilder:
     """Builds a 3D semantic map from a sequence of depth maps and semantic maps.
@@ -118,6 +120,88 @@ class SemanticMap3DBuilder:
             semantic_map[x, y, -z, 1:] = closest_semantic_label
         return semantic_map
 
+    def get_semantic_map_sparse(self, pose: datatypes.Pose, use_dicts: bool = False) -> datatypes.SemanticMap3D:
+        """Gets the 3D semantic map (voxel grid) around the agent. The map is parallel to the world frame. This is \
+        more efficient than the get_semantic_map if the semantic information is sparse, as this iterates over the \
+        points with semantic information instead of the voxels.
+
+        Args:
+            pose (datatypes.Pose): Pose of agent, i.e. (position, orientation)
+
+        Returns:
+            datatypes.SemanticMap3D: 3D semantic map (voxel grid) around the agent,
+                with shape (Width, Height, Depth, num_semantic_classes + 1),
+                whereby the first channel of the last dimension is the occupancy channel
+        """
+        @njit()
+        def update_semantic_map(semantic_map, grid_indices, semantic_labels):
+            for (i,j,k), label in zip(grid_indices, semantic_labels):
+                semantic_map[i,j,k,1:] = np.maximum(semantic_map[i,j,k,1:], label)
+            return semantic_map
+
+        @jit(nopython=False, forceobj=True)
+        def update_semantic_map_dict(semantic_map, grid_indices, semantic_labels):
+            max_label_dict = {}
+            for idx, label in zip(grid_indices, semantic_labels):
+                idx_tuple = tuple(idx)
+                if idx_tuple in max_label_dict:
+                    max_label_dict[idx_tuple] = np.maximum(max_label_dict[idx_tuple], label)
+                else:
+                    max_label_dict[idx_tuple] = label
+
+            for idx_tuple, max_label in max_label_dict.items():
+                i, j, k = idx_tuple
+                semantic_map[i, j, k, 1:] = np.maximum(semantic_map[i, j, k, 1:], max_label)
+
+            return semantic_map
+
+        position, _ = pose
+        min_point, max_point = self.get_semantic_map_bounds(position)
+        point_cloud_array = np.asarray(self.point_cloud.points)
+        semantic_map = np.zeros(self.semantic_map_3d_map_shape)
+
+        points_in_bounds_mask = np.all(np.logical_and(point_cloud_array > min_point, point_cloud_array < max_point),
+                                       axis=-1)
+
+        # Get grid index of origin by finding the grid index of the min point relative to the origin, and then inverting
+        grid_index_of_min_position_relative_to_origin = coordinates_to_grid_indices(np.array(min_point),
+                                                                                    (0,0,0), self._resolution)
+        grid_index_of_origin: datatypes.GridIndex3D = (
+            tuple(- grid_index_of_min_position_relative_to_origin)) # type: ignore[assignment]
+
+        # Get grid indices of points in bounds. Note that we can (and will) have duplicates here
+        grid_indices_of_points_in_bounds = coordinates_to_grid_indices(
+            point_cloud_array[points_in_bounds_mask], grid_index_of_origin, self._resolution)
+
+        # Set occupancy of all occupied voxels to 1
+        semantic_map[
+            grid_indices_of_points_in_bounds[:, 0],
+            grid_indices_of_points_in_bounds[:, 1],
+            grid_indices_of_points_in_bounds[:, 2],
+            0] = 1
+        # Get semantic labels of all occupied voxels
+        points_in_bounds_semantic_labels = self._point_cloud_semantic_labels[points_in_bounds_mask]
+        # This mask selects points which have any semantic information (the semantic label isn't all zeros)
+        points_in_bounds_with_semantic_information_mask = np.sum(points_in_bounds_semantic_labels, axis=-1) > 0
+        grid_indices_of_points_in_bounds_with_semantic_information = grid_indices_of_points_in_bounds[
+            points_in_bounds_with_semantic_information_mask]
+        semantic_labels_of_points_in_bounds_with_semantic_information = points_in_bounds_semantic_labels[
+            points_in_bounds_with_semantic_information_mask]
+
+        # Build the semantic map by iterating over the points with semantic information
+        if use_dicts:
+            semantic_map = update_semantic_map_dict(
+                semantic_map,
+                grid_indices_of_points_in_bounds_with_semantic_information,
+                semantic_labels_of_points_in_bounds_with_semantic_information)
+        else:
+            semantic_map = update_semantic_map(
+                semantic_map,
+                grid_indices_of_points_in_bounds_with_semantic_information, 
+                semantic_labels_of_points_in_bounds_with_semantic_information)
+
+        return semantic_map
+
     def get_cropped_point_cloud(
         self, min_point: datatypes.Coordinate3D, max_point: datatypes.Coordinate3D
     ) -> o3d.geometry.PointCloud:
@@ -177,7 +261,6 @@ class SemanticMap3DBuilder:
         max_point = max_point - max_shift
 
         return tuple(min_point), tuple(max_point)  # type: ignore[return-value]
-
 
     def _calculate_point_cloud(self, depth_map: datatypes.DepthMap, pose: datatypes.Pose) -> o3d.geometry.PointCloud:
         depth_image = o3d.geometry.Image(depth_map)

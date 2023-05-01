@@ -68,7 +68,7 @@ def get_ray_directions_world_coords(sensor_rotation: np.quaternion, #type: ignor
 
     rotation_matrix = quaternion.as_rotation_matrix(sensor_rotation)
     ray_directions_world = np.einsum('nm, mhw ->nhw', rotation_matrix, ray_directions_sensor)
-    ray_directions_world[-1] = -ray_directions_world[-1]
+    #ray_directions_world[-1] = -ray_directions_world[-1]
 
     return ray_directions_world
 
