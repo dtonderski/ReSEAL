@@ -4,9 +4,12 @@ import numpy as np
 import quaternion  # pylint: disable=unused-import
 from nptyping import Bool, Float, NDArray, Shape, Int
 
-SemanticMap3D = NDArray[Shape["NumPixelsX, NumPixelsY, NumPixelsZ, NumChannels"], Float]
-# TODO: one-hot encoding
-LabelMap3D = NDArray[Shape["NumPixelsX, NumPixelsY, NumPixelsZ"], Int]
+SemanticMap3D = NDArray[Shape["NumVoxelsX, NumVoxelsY, NumVoxelsZ, NumChannels"], Float]
+
+# In last channel, first dimension represents occupancy, second represents semantic label
+LabelMap3DCategorical = NDArray[Shape["NumVoxelsX, NumVoxelsY, NumVoxelsZ, 2"], Int]
+# OneHot encoding is going to be the standard since it is easier to use with binary dilation
+LabelMap3DOneHot = NDArray[Shape["NumVoxelsX, NumVoxelsY, NumVoxelsZ, [occupancy, numSemanticLabels]"], Bool]
 Coordinate2D = Tuple[float, float]
 Coordinate3D = Tuple[float, float, float]
 CoordinatesMapping2Dto3D = Mapping[Coordinate2D, Coordinate3D]
