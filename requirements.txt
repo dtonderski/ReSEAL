@@ -28,3 +28,7 @@ gym==0.21.0
 # open3d for map builder
 open3d==0.17.0
 scikit-learn==1.0.2
+# pyvista
+pyvista==0.38.5
+trame==2.4.0
+matplotlib==3.5.3
