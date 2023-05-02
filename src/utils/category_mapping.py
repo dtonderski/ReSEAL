@@ -3,6 +3,7 @@ from typing import Callable, Dict
 
 import numpy as np
 from matplotlib.colors import to_rgb
+from nptyping import NDArray, Shape, Float
 from yacs.config import CfgNode
 
 from ..config import default_data_paths_cfg
@@ -90,15 +91,14 @@ def get_scene_index_to_reseal_index_map(semantic_info_file_path: str, data_paths
 def get_scene_index_to_reseal_index_map_vectorized(semantic_info_file_path, data_paths_cfg:CfgNode = None) -> Callable:
     return np.vectorize(get_scene_index_to_reseal_index_map(semantic_info_file_path, data_paths_cfg).get)
 
-def get_reseal_color_converter(data_paths_cfg: CfgNode=None) -> Callable:
-    """ Get a numpy vectorized dictionary mapping from reseal index to reseal color. Can be chained with\
-        get_scene_index_to_reseal_index_map_vectorized to get the color for each pixel in a scene.
+def get_reseal_color_dict(data_paths_cfg: CfgNode = None) -> Dict[int, NDArray[Shape["3"], Float]]:
+    """ Get a dictionary mapping from reseal index to reseal color.
 
     Args:
         data_paths_cfg (CfgNode, optional): optional data_paths configuration. If none, uses default_data_paths_cfg().
 
     Returns:
-        Callable: numpy vectorized dictionary mapping from reseal index to reseal color.
+        Dict[str, Tuple[int, int, int]]: dictionary mapping from reseal index to reseal color
     """
     data_paths_cfg = default_data_paths_cfg() if data_paths_cfg is None else data_paths_cfg
 
@@ -108,5 +108,17 @@ def get_reseal_color_converter(data_paths_cfg: CfgNode=None) -> Callable:
         next(iter(reader))
         for row in reader:
             reseal_index_to_color[int(row[0])] = np.array(to_rgb(f"#{row[2]}"))
+    return reseal_index_to_color
 
+def get_reseal_color_converter(data_paths_cfg: CfgNode=None) -> Callable:
+    """ Get a numpy vectorized dictionary mapping from reseal index to reseal color. Can be chained with\
+        get_scene_index_to_reseal_index_map_vectorized to get the color for each pixel in a scene.
+
+    Args:
+        data_paths_cfg (CfgNode, optional): optional data_paths configuration.
+
+    Returns:
+        Callable: numpy vectorized dictionary mapping from reseal index to reseal color.
+    """
+    reseal_index_to_color = get_reseal_color_dict(data_paths_cfg)
     return np.vectorize(reseal_index_to_color.get, signature='()->(n)')
