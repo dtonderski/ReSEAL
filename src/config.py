@@ -40,3 +40,10 @@ def default_sensor_cfg() -> CfgNode:
     sensor_cfg.HFOV = 90 #deg
     sensor_cfg.SENSOR_HEIGHT = 0.88 #m
     return sensor_cfg
+
+def default_maskrcnn_cfg() -> CfgNode:
+    mask_cfg = CfgNode()
+    mask_cfg.NUM_CATEGORIES = 6
+    mask_cfg.BATCHSIZE = 1
+    mask_cfg.SHUFFLE = False
+    return mask_cfg

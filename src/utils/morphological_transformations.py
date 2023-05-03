@@ -3,6 +3,7 @@ from typing import Callable
 
 import numpy as np
 from scipy.ndimage.measurements import find_objects, label
+from scipy.ndimage.morphology import binary_dilation, bi
 
 from ..utils.datatypes import LabelMap3D, SemanticMap3D
 
@@ -48,3 +49,7 @@ def fill_holes(label_map: LabelMap3D, number_of_voxels_threshold: int,
         label_map[labeled_hole_map == hole_label] = most_frequent_label
 
     return label_map
+
+def binary_dilate(label_map: LabelMap3D) -> LabelMap3D:
+    binary_dilated_map = binary_dilation(label_map)    
+    return binary_dilation(label_map)
