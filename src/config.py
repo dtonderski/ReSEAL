@@ -77,3 +77,10 @@ def default_action_module_cfg() -> CfgNode:
     action_module_cfg.ACTION_PIPELINE.IS_DETERMINISTIC = True
     action_module_cfg.ACTION_PIPELINE.GLOBAL_POLICY_POLLING_FREQUENCY = 10
     return action_module_cfg
+    
+def default_maskrcnn_cfg() -> CfgNode:
+    mask_cfg = CfgNode()
+    mask_cfg.NUM_CATEGORIES = 6
+    mask_cfg.BATCHSIZE = 1
+    mask_cfg.SHUFFLE = False
+    return mask_cfg
