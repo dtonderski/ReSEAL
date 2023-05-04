@@ -11,19 +11,19 @@ from ..utils.datatypes import LabelMap3DCategorical, SemanticMap3D
 
 
 def visualize_semantic_map(semantic_map: SemanticMap3D, object_threshold:float = 0.5,
-                           opacity:float = 0.2, data_paths_cfg: CfgNode = None) -> pv.Plotter:
+                           opacity:float = 0.5, data_paths_cfg: CfgNode = None) -> pv.Plotter:
     map_for_plotting = get_map_for_plotting_from_semantic_map(semantic_map, object_threshold)
     return visualize_map(map_for_plotting, opacity, data_paths_cfg)
 
-def visualize_categorical_label_map(label_map: LabelMap3DCategorical, opacity:float = 0.2, 
+def visualize_categorical_label_map(label_map: LabelMap3DCategorical, opacity:float = 0.5,
                                     data_paths_cfg: CfgNode = None) -> pv.Plotter:
     map_for_plotting = get_map_for_plotting_from_label_map(label_map)
     return visualize_map(map_for_plotting, opacity, data_paths_cfg)
 
 def visualize_map(map_for_plotting: NDArray[Shape["X,Y,Z"], Int],
-                  opacity:float = 0.2,
+                  opacity:float = 0.5,
                   data_paths_cfg: CfgNode = None) -> pv.Plotter:
-     
+
     color_map, reseal_map = get_plotting_dicts(map_for_plotting.max(), opacity, data_paths_cfg)
     dims = map_for_plotting.shape
 
@@ -63,7 +63,7 @@ def get_map_for_plotting_from_semantic_map(semantic_map: SemanticMap3D, object_t
 def get_map_for_plotting_from_label_map(label_map: LabelMap3DCategorical) -> NDArray[Shape["X,Y,Z"], Int]:
     return label_map.sum(axis=-1)
 
-def get_plotting_dicts(max_present_label_index: int, opacity:float = 0.4,
+def get_plotting_dicts(max_present_label_index: int, opacity:float = 0.5,
                        data_paths_cfg: CfgNode = None) -> Tuple[ListedColormap, Dict[int, str]]:
     """Get color map and label names for plotting.
 
