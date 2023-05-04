@@ -3,6 +3,7 @@ from typing import Callable
 
 import numpy as np
 from scipy.ndimage.measurements import find_objects, label
+from scipy.ndimage.morphology import binary_dilation
 
 from ...utils.datatypes import LabelMap3DCategorical, LabelMap3DOneHot, SemanticMap3D
 
@@ -75,7 +76,8 @@ def remove_small_objects(label_map: LabelMap3DCategorical, number_of_voxels_thre
 
     return label_map
 
-def categorical_label_map_to_onehot_label_map(label_map: LabelMap3DCategorical, num_semantic_classes: int
+# TODO: num_semantic_classes is a very bad name, as it's actually num_semantic_classes+1 for occupancy
+def categorical_label_map_to_onehot_label_map(label_map: LabelMap3DCategorical, num_semantic_classes: int = 7
                                               ) -> LabelMap3DOneHot:
     # Extract the occupancy and category arrays
     occupancy = label_map[..., 0]
@@ -84,7 +86,7 @@ def categorical_label_map_to_onehot_label_map(label_map: LabelMap3DCategorical, 
     # One-hot encode the category array
     one_hot = np.eye(num_semantic_classes)[category]
     one_hot[..., 0] = occupancy
-    return one_hot
+    return one_hot.astype(bool)
 
 def onehot_label_map_to_categorical_label_map(one_hot_label_map: LabelMap3DOneHot) -> LabelMap3DCategorical:
     # Extract the occupancy array from the first dimension of the one_hot_label_map
@@ -101,3 +103,23 @@ def onehot_label_map_to_categorical_label_map(one_hot_label_map: LabelMap3DOneHo
     categorical_label_map = np.stack((occupancy, category), axis=-1)
 
     return categorical_label_map
+
+
+def dilate_onehot_label_map(label_map: LabelMap3DOneHot):
+    for i in range(1, label_map.shape[-1]):
+        label_map[..., i] = binary_dilation(label_map[..., i], iterations=1)
+        label_map[label_map[..., i], 0] = 1
+    return label_map
+
+def dilate_map(label_map: LabelMap3DCategorical):
+    """ Dilate categorical label map by converting it to onehot, dilating, and converting back to categorical.
+
+    Args:
+        label_map (LabelMap3DCategorical): _description_
+
+    Returns:
+        _type_: _description_
+    """    
+    onehot_label_map = categorical_label_map_to_onehot_label_map(label_map)
+    onehot_label_map_dilated = dilate_onehot_label_map(onehot_label_map)
+    return onehot_label_map_to_categorical_label_map(onehot_label_map_dilated)
