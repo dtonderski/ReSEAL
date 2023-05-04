@@ -70,8 +70,8 @@ maskrcnn_index	name	reseal_name
 68	N/A	unlabeled
 69	N/A	unlabeled
 70	toilet	toilet
-71	N/A	tv
-72	tv	unlabeled
+71	N/A	unlabeled
+72	tv	tv
 73	laptop	unlabeled
 74	mouse	unlabeled
 75	remote	unlabeled
