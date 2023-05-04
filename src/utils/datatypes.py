@@ -10,6 +10,10 @@ SemanticMap3D = NDArray[Shape["NumVoxelsX, NumVoxelsY, NumVoxelsZ, NumChannels"]
 LabelMap3DCategorical = NDArray[Shape["NumVoxelsX, NumVoxelsY, NumVoxelsZ, 2"], Int]
 # OneHot encoding is going to be the standard since it is easier to use with binary dilation
 LabelMap3DOneHot = NDArray[Shape["NumVoxelsX, NumVoxelsY, NumVoxelsZ, [occupancy, numSemanticLabels]"], Bool]
+# Instance maps, similar to LabelMaps but with instance IDs instead of semantic labels
+InstanceMap3DCategorical = NDArray[Shape["NumVoxelsX, NumVoxelsY, NumVoxelsZ, 2"], Int]
+InstanceMap3DOneHot = NDArray[Shape["NumVoxelsX, NumVoxelsY, NumVoxelsZ, NumInstances"], Bool]
+
 Coordinate2D = Tuple[float, float]
 Coordinate3D = Tuple[float, float, float]
 CoordinatesMapping2Dto3D = Mapping[Coordinate2D, Coordinate3D]
