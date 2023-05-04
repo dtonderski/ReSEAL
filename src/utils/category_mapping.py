@@ -27,6 +27,18 @@ def get_hm3dsem_raw_names_to_matterport_names_mapping_dict(data_paths_cfg: CfgNo
             hm3dsem_mapping[row[0]] = row[2]
     return hm3dsem_mapping
 
+def get_maskrcnn_to_reseal_map(data_paths_cfg: CfgNode = None) -> Dict[int, int]: 
+    mask_mapping = {}
+    data_paths_cfg = default_data_paths_cfg() if data_paths_cfg is None else data_paths_cfg
+    reseal_name_map = get_reseal_name_to_reseal_index_map()
+    
+    with open(data_paths_cfg.MASKRCNN_TO_RESEAL_MAPPING_PATH, encoding='utf8') as csvfile:
+        reader = csv.reader(csvfile, delimiter = '\t')
+        next(iter(reader))
+        for row in reader:
+            mask_mapping[row[0]] = reseal_name_map.get(row[2])
+    return mask_mapping
+
 def get_scene_index_to_matterport_name_map(semantic_info_file_path, data_paths_cfg: CfgNode = None) -> Dict[int, str]:
     hm3dsem_name_to_matterport_name = get_hm3dsem_raw_names_to_matterport_names_mapping_dict(data_paths_cfg)
 

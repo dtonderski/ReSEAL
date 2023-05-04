@@ -17,3 +17,5 @@ open3d==0.17.0
 pyvista==0.38.5
 trame==2.4.0
 matplotlib==3.5.3
+# MaskRCNN
+torchvision
