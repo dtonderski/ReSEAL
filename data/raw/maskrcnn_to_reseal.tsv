@@ -1,4 +1,5 @@
 maskrcnn_index	name	reseal_name
+0	__background__	unlabeled
 1	person	unlabeled
 2	bicycle	unlabeled
 3	car	unlabeled
