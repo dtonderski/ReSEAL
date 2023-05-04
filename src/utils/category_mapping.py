@@ -8,6 +8,7 @@ from yacs.config import CfgNode
 
 from ..config import default_data_paths_cfg
 from ..utils.misc import sorted_dict_by_value
+from ..utils.datatypes import LabelMap3DCategorical, InstanceMap3DCategorical
 
 
 def get_hm3dsem_raw_names_to_matterport_names_mapping_dict(data_paths_cfg: CfgNode = None) -> Dict[str, str]:
@@ -27,34 +28,32 @@ def get_hm3dsem_raw_names_to_matterport_names_mapping_dict(data_paths_cfg: CfgNo
     return hm3dsem_mapping
 
 def get_scene_index_to_matterport_name_map(semantic_info_file_path, data_paths_cfg: CfgNode = None) -> Dict[int, str]:
-    hm3dsem_to_matterport_mapping = get_hm3dsem_raw_names_to_matterport_names_mapping_dict(data_paths_cfg)
+    hm3dsem_name_to_matterport_name = get_hm3dsem_raw_names_to_matterport_names_mapping_dict(data_paths_cfg)
 
     with open(semantic_info_file_path, encoding='utf8') as semantic_info_file:
         lines = semantic_info_file.readlines()
-        name_dict = {}
+        scene_index_to_hm3dsem_name = {}
 
         # 0s are void
-        name_dict[0] = 'void'
+        scene_index_to_hm3dsem_name[0] = 'void'
         for line in lines[1:]:
             index, _, name, _ = line.split(',')
             name = name.replace('"', '')
-            name_dict[int(index)] = name
+            scene_index_to_hm3dsem_name[int(index)] = name
 
-    scene_index_to_matterport_name = {k: hm3dsem_to_matterport_mapping[v] for k, v in name_dict.items()}
-    return sorted_dict_by_value(scene_index_to_matterport_name)
+    return sorted_dict_by_value(chain_dicts(scene_index_to_hm3dsem_name, hm3dsem_name_to_matterport_name))
 
 def get_scene_index_to_matterport_index_map(semantic_info_file_path, data_paths_cfg: CfgNode = None) -> Dict[int, int]:
     scene_index_to_matterport_name = get_scene_index_to_matterport_name_map(semantic_info_file_path, data_paths_cfg)
     data_paths_cfg = default_data_paths_cfg() if data_paths_cfg is None else data_paths_cfg
 
-    matterport_mapping = {}
+    matterport_name_to_matterport_index = {}
     with open(data_paths_cfg.MATTERPORT_MAPPING_PATH, encoding='utf8') as csvfile:
         reader = csv.reader(csvfile, delimiter = '\t')
         next(iter(reader))
         for row in reader:
-            matterport_mapping[row[1]] = int(row[0])
-    return {k: matterport_mapping[v] for k, v in scene_index_to_matterport_name.items()}
-    
+            matterport_name_to_matterport_index[row[1]] = int(row[0])
+    return chain_dicts(scene_index_to_matterport_name, matterport_name_to_matterport_index)
 
 def get_matterport_name_to_reseal_name_map(data_paths_cfg:CfgNode = None) -> Dict[str, str]:
     data_paths_cfg = default_data_paths_cfg() if data_paths_cfg is None else data_paths_cfg
@@ -78,15 +77,24 @@ def get_reseal_name_to_reseal_index_map(data_paths_cfg: CfgNode=None) -> Dict[st
             reseal_name_to_reseal_index[row[1]] = int(row[0])
     return reseal_name_to_reseal_index
 
+def get_reseal_index_to_reseal_name_map(data_paths_cfg: CfgNode=None) -> Dict[int, str]:
+    data_paths_cfg = default_data_paths_cfg() if data_paths_cfg is None else data_paths_cfg
+
+    reseal_index_to_reseal_name = {}
+    with open(data_paths_cfg.RESEAL_MAPPING_PATH, encoding='utf8') as csvfile:
+        reader = csv.reader(csvfile, delimiter = '\t')
+        next(iter(reader))
+        for row in reader:
+            reseal_index_to_reseal_name[int(row[0])] = row[1]
+    return reseal_index_to_reseal_name
+
 def get_matterport_name_to_reseal_index_map(data_paths_cfg = None) -> Dict[str, int]:
-    matterport_name_to_reseal_name = get_matterport_name_to_reseal_name_map(data_paths_cfg)
-    reseal_name_to_reseal_index = get_reseal_name_to_reseal_index_map(data_paths_cfg)
-    return {k: reseal_name_to_reseal_index[v] for k, v in matterport_name_to_reseal_name.items()}
+    return chain_dicts(get_matterport_name_to_reseal_name_map(data_paths_cfg),
+                       get_reseal_name_to_reseal_index_map(data_paths_cfg))
 
 def get_scene_index_to_reseal_index_map(semantic_info_file_path: str, data_paths_cfg:CfgNode = None) -> Dict[int, int]:
-    scene_to_matterport_names = get_scene_index_to_matterport_name_map(semantic_info_file_path, data_paths_cfg)
-    matterport_name_to_reseal_index = get_matterport_name_to_reseal_index_map(data_paths_cfg)
-    return {k: matterport_name_to_reseal_index[v] for k, v in scene_to_matterport_names.items()}
+    return chain_dicts(get_scene_index_to_matterport_name_map(semantic_info_file_path, data_paths_cfg),
+                       get_matterport_name_to_reseal_index_map(data_paths_cfg))
 
 def get_scene_index_to_reseal_index_map_vectorized(semantic_info_file_path, data_paths_cfg:CfgNode = None) -> Callable:
     return np.vectorize(get_scene_index_to_reseal_index_map(semantic_info_file_path, data_paths_cfg).get)
@@ -122,3 +130,30 @@ def get_reseal_color_converter(data_paths_cfg: CfgNode=None) -> Callable:
     """
     reseal_index_to_color = get_reseal_color_dict(data_paths_cfg)
     return np.vectorize(reseal_index_to_color.get, signature='()->(n)')
+
+def get_instance_index_to_reseal_index_dict(instance_map: InstanceMap3DCategorical, 
+                               label_map: LabelMap3DCategorical) -> Dict[int, int]:
+    instance_to_reseal_dict = {}
+    instance_to_reseal_dict[0] = 0
+    for instance_number in np.unique(instance_map[..., 1])[1:]:
+        first_location_of_instance = tuple(x[0] for x in np.where(instance_map[..., 1] == instance_number))
+        instance_to_reseal_dict[instance_number] = label_map[(*first_location_of_instance, 1)]
+    return instance_to_reseal_dict
+
+def get_instance_index_to_reseal_name_dict(instance_map: InstanceMap3DCategorical,
+                                           label_map: LabelMap3DCategorical,
+                                           data_paths_cfg = None) -> Dict[int, str]:
+    return chain_dicts(get_instance_index_to_reseal_index_dict(instance_map, label_map),
+                       get_reseal_index_to_reseal_name_map(data_paths_cfg))
+
+def chain_dicts(dict1: Dict, dict2: Dict) -> Dict:
+    """ Chain two dictionaries together, where the keys of dict1 are the values of dict2.
+
+    Args:
+        dict1 (Dict): first dictionary
+        dict2 (Dict): second dictionary
+
+    Returns:
+        Dict: chained dictionary
+    """
+    return {k: dict2[v] for k, v in dict1.items()}
