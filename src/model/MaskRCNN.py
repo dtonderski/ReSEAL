@@ -50,4 +50,4 @@ def generating_semantic_masks(perception_model, image):
     for category in range(1, num_channels):
         if category in labels:
             semantic_map_2d[:,:,category] = (model_output['masks'].squeeze(1)[labels == category].detach().cpu().max(dim=0)[0])[0]
-    return semantic_map_2d[:,:, 1:].numpy()
+    return semantic_map_2d[:,:, 1:]
