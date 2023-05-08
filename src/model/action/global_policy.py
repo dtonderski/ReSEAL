@@ -1,7 +1,7 @@
 from typing import Optional, Tuple, Union
 
 import habitat_sim
-from gym import spaces
+from gymnasium import spaces
 from stable_baselines3.common.distributions import Distribution
 from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.type_aliases import Schedule
