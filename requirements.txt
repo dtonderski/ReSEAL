@@ -10,7 +10,7 @@ ipykernel==6.16.2
 plotly==5.13.1
 nbformat==5.7.0
 pandas==1.3.5
-habitat-sim @ git+https://git@github.com/facebookresearch/habitat-sim.git@v0.2.3
+habitat-sim
 stable-baselines3 @ git+https://github.com/DLR-RM/stable-baselines3.git
 open3d==0.17.0
 # open3d-cpu==0.17.9
