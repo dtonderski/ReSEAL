@@ -1,0 +1,5 @@
+data/
+.git/
+models/
+notebooks/
+.venv/
