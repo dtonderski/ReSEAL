@@ -7,12 +7,16 @@ RUN apt-get -y install --no-install-recommends \
     libgl1 \
     libgomp1 \
     libusb-1.0-0
+RUN apt-get -y autoremove \
+    && apt-get clean autoclean \
+    && rm -rf /var/lib/apt/lists/{apt,dpkg,cache,log} /tmp/* /var/tmp/*
 
 # Install conda
 RUN mkdir /venv
 WORKDIR /venv
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-RUN bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+  && bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda \
+  && rm Miniconda3-latest-Linux-x86_64.sh
 SHELL ["/bin/bash", "-c"]
 RUN bash /opt/conda/etc/profile.d/conda.sh
 ENV PATH="/opt/conda/bin/:$PATH"
@@ -25,7 +29,8 @@ RUN conda init
 RUN conda create -y -n habitat python=3.9 cmake=3.14.0
 SHELL ["conda", "run", "-n", "habitat", "/bin/bash", "-c"]
 RUN . activate habitat
-RUN . setup_venv.sh
+RUN . setup_venv.sh \
+  && pip cache purge
 SHELL ["/bin/bash", "-c"]
 
 WORKDIR /workspace
