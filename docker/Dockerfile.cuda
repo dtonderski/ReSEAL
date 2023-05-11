@@ -2,7 +2,11 @@ FROM nvcr.io/nvidia/cudagl:11.4.2-base-ubuntu20.04
 
 RUN apt-get update
 RUN apt-get -y install --no-install-recommends sudo git curl wget
-RUN apt-get -y install --no-install-recommends libosmesa6-dev
+RUN apt-get -y install --no-install-recommends \
+    libosmesa6-dev \
+    libgl1 \
+    libgomp1 \
+    libusb-1.0-0
 
 # Install conda
 RUN mkdir /venv
