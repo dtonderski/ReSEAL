@@ -19,10 +19,10 @@ COPY requirements-dev.txt /venv/requirements-dev.txt
 COPY tools/setup_venv.sh /venv/setup_venv.sh
 RUN conda init
 RUN conda create -y -n habitat python=3.9 cmake=3.14.0
-# SHELL ["conda", "run", "-n", "habitat", "/bin/bash", "-c"]
+SHELL ["conda", "run", "-n", "habitat", "/bin/bash", "-c"]
 RUN . activate habitat
 RUN . setup_venv.sh
-# SHELL ["/bin/bash", "-c"]
+SHELL ["/bin/bash", "-c"]
 
 WORKDIR /workspace
 ENV SHELL=/bin/bash
