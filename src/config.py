@@ -2,6 +2,13 @@ from pathlib import Path
 
 from yacs.config import CfgNode
 
+def default_map_processor_cfg() -> CfgNode:
+    label_map_builder_cfg = CfgNode()
+    label_map_builder_cfg.NO_OBJECT_CONFIDENCE_THRESHOLD = 0.5
+    label_map_builder_cfg.HOLE_VOXEL_THRESHOLD = 10
+    label_map_builder_cfg.OBJECT_VOXEL_THRESHOLD = 10
+    label_map_builder_cfg.DILATE = True
+    return label_map_builder_cfg
 
 def default_map_builder_cfg() -> CfgNode:
     map_builder_cfg = CfgNode()
@@ -27,6 +34,7 @@ def default_data_paths_cfg() -> CfgNode:
     data_paths_cfg.MATTERPORT_MAPPING_PATH = str(Path(data_paths_cfg.RAW_DATA_DIR, "mpcat40.tsv"))
     data_paths_cfg.MATTERPORT_TO_RESEAL_MAPPING_PATH = str(Path(data_paths_cfg.RAW_DATA_DIR, "mpcat40_to_reseal.tsv"))
     data_paths_cfg.RESEAL_MAPPING_PATH = str(Path(data_paths_cfg.RAW_DATA_DIR, "reseal.tsv"))
+    data_paths_cfg.MASKRCNN_TO_RESEAL_MAPPING_PATH = str(Path(data_paths_cfg.RAW_DATA_DIR, "maskrcnn_to_reseal.tsv"))
     return data_paths_cfg
 
 
