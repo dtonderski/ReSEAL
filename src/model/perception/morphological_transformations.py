@@ -101,23 +101,3 @@ def onehot_label_map_to_categorical_label_map(one_hot_label_map: LabelMap3DOneHo
     categorical_label_map = np.stack((occupancy, category), axis=-1)
 
     return categorical_label_map
-
-
-def dilate_onehot_label_map(label_map: LabelMap3DOneHot):
-    for i in range(1, label_map.shape[-1]):
-        label_map[..., i] = binary_dilation(label_map[..., i], iterations=1)
-        label_map[label_map[..., i], 0] = 1
-    return label_map
-
-def dilate_map(label_map: LabelMap3DCategorical):
-    """ Dilate categorical label map by converting it to onehot, dilating, and converting back to categorical.
-
-    Args:
-        label_map (LabelMap3DCategorical): _description_
-
-    Returns:
-        _type_: _description_
-    """    
-    onehot_label_map = categorical_label_map_to_onehot_label_map(label_map)
-    onehot_label_map_dilated = dilate_onehot_label_map(onehot_label_map)
-    return onehot_label_map_to_categorical_label_map(onehot_label_map_dilated)
