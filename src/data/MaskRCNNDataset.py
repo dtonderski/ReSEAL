@@ -17,7 +17,6 @@ class MaskRCNNDataset(Dataset):
 
     def __getitem__(self, idx):
         img_path = os.path.join(self.root, "RGB", self.imgs[idx])
-        # Label_Generator
         mask_path = os.path.join(self.root, "MASKS", self.masks[idx])
         img = Image.open(img_path).convert("RGB")
         mask = np.load(mask_path)
@@ -28,6 +27,7 @@ class MaskRCNNDataset(Dataset):
         masks = mask == obj_ids[:, None, None]
         num_objs = len(obj_ids)
         boxes =  []
+        print(num_objs)
         for i in range(num_objs):
             pos = np.where(masks[i])
             xmin = np.min(pos[1])
