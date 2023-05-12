@@ -8,27 +8,6 @@ from scipy.ndimage.morphology import binary_dilation
 from ...utils.datatypes import LabelMap3DCategorical, LabelMap3DOneHot, SemanticMap3D
 
 
-def semantic_map_to_categorical_label_map(semantic_map: SemanticMap3D,
-                                          no_object_threshold: float) -> LabelMap3DCategorical:
-    """Convert a semantic map to a categorical label map by copying the occupancy, thresholding the semantic info of
-    the semantic map, and setting the semantic info of the label map to the maximum category if there is any above the 
-    threshold and 0 otherwise.
-
-    Args:
-        semantic_map (SemanticMap3D): the semantic map to convert.
-        no_object_threshold (float): the threshold above which an object is considered present.
-
-    Returns:
-        LabelMap3DCategorical: the categorical label map.
-    """
-    occupancy = semantic_map[..., 0]
-    semantic_info = semantic_map[..., 1:]
-    semantic_info[semantic_info < no_object_threshold] = 0
-    # Do onehot encoding. Because of the sum, this will be 0 only if all semantic labels are below threshold.
-    label_map = np.argmax(semantic_info, axis = -1) + np.any(semantic_info, axis = -1)
-    return np.stack([occupancy, label_map], axis=-1).astype(int)
-
-
 def fill_holes(label_map: LabelMap3DCategorical, number_of_voxels_threshold: int,
                comparator: Callable = operator.le) -> LabelMap3DCategorical:
     # The inverted map will be 1 wherever there is no labeled object. This means that we can use find_objects to find
@@ -76,6 +55,25 @@ def remove_small_objects(label_map: LabelMap3DCategorical, number_of_voxels_thre
 
     return label_map
 
+def dilate_onehot_label_map(label_map: LabelMap3DOneHot):
+    for i in range(1, label_map.shape[-1]):
+        label_map[..., i] = binary_dilation(label_map[..., i], iterations=1)
+        label_map[label_map[..., i], 0] = 1
+    return label_map
+
+def dilate_map(label_map: LabelMap3DCategorical):
+    """ Dilate categorical label map by converting it to onehot, dilating, and converting back to categorical.
+
+    Args:
+        label_map (LabelMap3DCategorical): _description_
+
+    Returns:
+        _type_: _description_
+    """    
+    onehot_label_map = categorical_label_map_to_onehot_label_map(label_map)
+    onehot_label_map_dilated = dilate_onehot_label_map(onehot_label_map)
+    return onehot_label_map_to_categorical_label_map(onehot_label_map_dilated)
+
 # TODO: num_semantic_classes is a very bad name, as it's actually num_semantic_classes+1 for occupancy
 def categorical_label_map_to_onehot_label_map(label_map: LabelMap3DCategorical, num_semantic_classes: int = 7
                                               ) -> LabelMap3DOneHot:
@@ -103,23 +101,3 @@ def onehot_label_map_to_categorical_label_map(one_hot_label_map: LabelMap3DOneHo
     categorical_label_map = np.stack((occupancy, category), axis=-1)
 
     return categorical_label_map
-
-
-def dilate_onehot_label_map(label_map: LabelMap3DOneHot):
-    for i in range(1, label_map.shape[-1]):
-        label_map[..., i] = binary_dilation(label_map[..., i], iterations=1)
-        label_map[label_map[..., i], 0] = 1
-    return label_map
-
-def dilate_map(label_map: LabelMap3DCategorical):
-    """ Dilate categorical label map by converting it to onehot, dilating, and converting back to categorical.
-
-    Args:
-        label_map (LabelMap3DCategorical): _description_
-
-    Returns:
-        _type_: _description_
-    """    
-    onehot_label_map = categorical_label_map_to_onehot_label_map(label_map)
-    onehot_label_map_dilated = dilate_onehot_label_map(onehot_label_map)
-    return onehot_label_map_to_categorical_label_map(onehot_label_map_dilated)
