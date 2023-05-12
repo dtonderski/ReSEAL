@@ -6,7 +6,7 @@ from matplotlib.colors import ListedColormap
 from nptyping import Int, NDArray, Shape
 from yacs.config import CfgNode
 
-from ..utils.category_mapping import get_reseal_color_dict, get_reseal_name_to_reseal_index_map
+from ..utils.category_mapping import get_reseal_index_to_color_dict, get_reseal_name_to_reseal_index_dict
 from ..utils.datatypes import LabelMap3DCategorical, SemanticMap3D
 
 
@@ -42,7 +42,7 @@ def visualize_map(map_for_plotting: NDArray[Shape["X,Y,Z"], Int],
         fmt="%.1f",
         font_family="arial",
     )
-
+    plotter.set_background('#AAAAAA')
     plotter.add_mesh(grid, scalars="values", cmap=color_map, annotations = reseal_map, scalar_bar_args=sargs)
     return plotter
 
@@ -74,9 +74,9 @@ def get_plotting_dicts(max_present_label_index: int, opacity:float = 0.5,
     Returns:
         Tuple[ListedColormap, Dict[int, str]]: color map and label names
     """
-    color_dict = {k:v for k,v in get_reseal_color_dict(data_paths_cfg).items() if k < max_present_label_index}
+    color_dict = {k:v for k,v in get_reseal_index_to_color_dict(data_paths_cfg).items() if k < max_present_label_index}
     color_dict[0] = np.array([*color_dict[0], opacity])
     color_map = ListedColormap([*[color_dict[category] for category in color_dict]])
 
-    reseal_map = {v+1:k for k,v in get_reseal_name_to_reseal_index_map(data_paths_cfg).items()}
+    reseal_map = {v+1:k for k,v in get_reseal_name_to_reseal_index_dict(data_paths_cfg).items()}
     return color_map, reseal_map
