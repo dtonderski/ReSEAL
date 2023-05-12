@@ -51,7 +51,6 @@ class ModelWrapper():
     @property
     def maskrcnn(self) -> nn.Module:
         return self._maskrcnn
-
     @property
     def mode(self) -> str:
         return self._mode
@@ -94,7 +93,6 @@ class ModelWrapper():
             self._mode = 'eval'
         else:
             raise ValueError(f"Unknown mode: {mode}")
-
     def _update_device(self, device):
         if device == 'cpu':
             self._maskrcnn.cpu()
@@ -124,7 +122,6 @@ class ModelWrapper():
 
     def cuda(self):
         self._update_device('cuda')
-
     def cpu(self):
         self._update_device('cpu')
 
