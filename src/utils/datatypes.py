@@ -13,6 +13,8 @@ LabelMap3DOneHot = NDArray[Shape["NumVoxelsX, NumVoxelsY, NumVoxelsZ, [occupancy
 # Instance maps, similar to LabelMaps but with instance IDs instead of semantic labels
 InstanceMap3DCategorical = NDArray[Shape["NumVoxelsX, NumVoxelsY, NumVoxelsZ, 2"], Int]
 InstanceMap3DOneHot = NDArray[Shape["NumVoxelsX, NumVoxelsY, NumVoxelsZ, NumInstances"], Bool]
+InstanceMap2DOneHot = NDArray[Shape["Height, Width, NumInstances"], Bool]
+InstanceMap2DCategorical = NDArray[Shape["Height, Width"], Int]
 
 Coordinate2D = Tuple[float, float]
 Coordinate3D = Tuple[float, float, float]
