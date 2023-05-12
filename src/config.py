@@ -73,7 +73,14 @@ def default_action_module_cfg() -> CfgNode:
     
 def default_maskrcnn_cfg() -> CfgNode:
     mask_cfg = CfgNode()
-    mask_cfg.NUM_CATEGORIES = 6
-    mask_cfg.BATCHSIZE = 1
+    mask_cfg.NUM_EPOCHS = 10
+    mask_cfg.NUM_CLASSES = 6
+    mask_cfg.BATCH_SIZE = 1
     mask_cfg.SHUFFLE = False
+    mask_cfg.NUM_WORKERS = 4
+    mask_cfg.LEARNING_RATE = 0.005
+    mask_cfg.OPTIM_MOMENTUM = 0.9
+    mask_cfg.OPTIM_WEIGHT_DECAY = 0.0005
+    mask_cfg.OPTIM_STEP_SIZE = 3
+    mask_cfg.OPTIM_GAMMA = 0.1    
     return mask_cfg
