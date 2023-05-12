@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import numpy as np
 import quaternion  # pylint: disable=unused-import
@@ -112,7 +112,12 @@ class SemanticMap3DBuilder:
     def semantic_map_3d_map_shape(self) -> Tuple[int, int, int, int]:
         """Tuple[int, int, int, int]: Shape of the semantic map 3D voxel grid,
         calculated from `MAP_SIZE` and `RESOLUTION`"""
-        map_size = np.round(self._map_size / self._resolution).astype(int) + 1
+
+        if self._get_entire_map:
+            min_point, max_point = self.get_semantic_map_bounds(None)
+            map_size = np.round((np.array(max_point) - np.array(min_point)) / self._resolution).astype(int) + 2
+        else:
+            map_size = np.round(self._map_size / self._resolution).astype(int) + 1
         return (*map_size, self._num_semantic_classes + 1)  # type: ignore[return-value]
 
     def clear(self) -> None:
