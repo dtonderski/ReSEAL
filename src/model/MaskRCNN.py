@@ -6,20 +6,24 @@ from torchvision.models.detection import maskrcnn_resnet50_fpn, MaskRCNN_ResNet5
 from torch.utils.data import DataLoader
 from src.config import default_maskrcnn_cfg
 from src.data.MaskRCNNDataset import MaskRCNNDataset
-from ..utils.datatypes import SemanticMap2D, RGBImage
+from src.utils.datatypes import SemanticMap2D, RGBImage
 from src.utils.category_mapping import get_maskrcnn_to_reseal_map
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
+
 
 # Setting up the MaskRCNN considering the config.py
 # returns model with corresponing config weights and transforms
-def init_maskrcnn():
-    cfg = default_maskrcnn_cfg()
-    model = None
-    weights = None
-    if(cfg.MODEL == "resnet50_fpn"):
-        weights = MaskRCNN_ResNet50_FPN_Weights.DEFAULT
-        transforms = weights.transforms()
-        model = maskrcnn_resnet50_fpn(weights = weights)
-    return model, weights, transforms
+def build_maskrcnn(num_classes):
+    model = maskrcnn_resnet50_fpn(weights = MaskRCNN_ResNet50_FPN_Weights)
+    # in_features = model.roi_heads.box_predictor.cls_score.in_features
+    # model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+    # in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels
+    # hidden_layer = 256
+    # model.roi_heads.maks_predictor = MaskRCNNPredictor(in_features_mask,
+    #                                                        hidden_layer,
+    #                                                        num_classes)
+    return model
 
 # Method to generate semantig masks 
 # iterating through all scenes and sampled trajectories
@@ -35,7 +39,7 @@ def generating_semantic_masks(perception_model, image):
     # dimensions of the SemanticMap2D
     height = image.shape[1]
     width = image.shape[2]
-    num_channels = cfg.NUM_CATEGORIES
+    num_channels = cfg.NUM_CLASSES
     
     semantic_map_2d = torch.zeros(height, width, num_channels+1)
 
