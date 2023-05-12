@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import numpy as np
 import open3d as o3d
@@ -28,6 +28,7 @@ class SemanticMap3DBuilder:
 
     def __init__(self, map_builder_cfg: CfgNode, sim_cfg: CfgNode) -> None:
         self._resolution = map_builder_cfg.RESOLUTION  # m per voxel
+        self._get_entire_map = map_builder_cfg.GET_ENTIRE_MAP if 'GET_ENTIRE_MAP' in map_builder_cfg else False
         self._map_size = np.array(map_builder_cfg.MAP_SIZE)  # map (voxel grid) size in meters
         self._num_semantic_classes = map_builder_cfg.NUM_SEMANTIC_CLASSES
         self._intrinsic = get_camera_intrinsic_from_cfg(sim_cfg.SENSOR_CFG)
@@ -60,7 +61,12 @@ class SemanticMap3DBuilder:
     def semantic_map_3d_map_shape(self) -> Tuple[int, int, int, int]:
         """Tuple[int, int, int, int]: Shape of the semantic map 3D voxel grid,
         calculated from `MAP_SIZE` and `RESOLUTION`"""
-        map_size = np.round(self._map_size / self._resolution).astype(int) + 1
+
+        if self._get_entire_map:
+            min_point, max_point = self.get_semantic_map_bounds(None)
+            map_size = np.round((np.array(max_point) - np.array(min_point)) / self._resolution).astype(int) + 2
+        else:
+            map_size = np.round(self._map_size / self._resolution).astype(int) + 1
         return (*map_size, self._num_semantic_classes + 1)  # type: ignore[return-value]
 
     def clear(self) -> None:
@@ -158,6 +164,7 @@ class SemanticMap3DBuilder:
 
         position, _ = pose
         min_point, max_point = self.get_semantic_map_bounds(position)
+
         point_cloud_array = np.asarray(self.point_cloud.points)
         semantic_map = np.zeros(self.semantic_map_3d_map_shape)
 
@@ -202,6 +209,25 @@ class SemanticMap3DBuilder:
                 semantic_labels_of_points_in_bounds_with_semantic_information)
 
         return semantic_map
+
+    def get_grid_index_of_origin(self, position: datatypes.TranslationVector) -> NDArray[Shape["3"], Int]:
+        """ This function is needed because when raytracing in a grid we need the grid index of the origin.
+
+        Args:
+            position (datatypes.TranslationVector): the position of the object that the map is centered around
+
+        Returns:
+            NDArray[Shape["3"], Int]: grid index of origin in numpy array form. Note that this does not have to be \
+                confined to the map bounds - we can for example have a negative grid index of origin. This is not a \
+                problem in raytracing because we only use the grid index of origin to determine the grid index of \
+                coordinates, we never use it to index into the map itself.
+        """
+        min_position, _ = self.get_semantic_map_bounds(position)
+        grid_index_of_min_position_relative_to_origin = coordinates_to_grid_indices(
+            np.array(min_position), (0, 0, 0), self._resolution
+        )
+        return -grid_index_of_min_position_relative_to_origin
+
 
     def get_cropped_point_cloud(
         self, min_point: datatypes.Coordinate3D, max_point: datatypes.Coordinate3D
@@ -249,19 +275,29 @@ class SemanticMap3DBuilder:
         return points_in_radius[most_confident_label, :]
 
     def get_semantic_map_bounds(
-        self, position: datatypes.TranslationVector
+        self, position: Optional[datatypes.TranslationVector]
     ) -> Tuple[datatypes.Coordinate3D, datatypes.Coordinate3D]:
-        min_point = position - self._map_size / 2
-        max_point = position + self._map_size / 2
+        if not self._get_entire_map:
+            if position is None:
+                raise ValueError("Position must be provided when not getting the entire map")
+            min_point = position - self._map_size / 2
+            max_point = position + self._map_size / 2
+            return self._shift_points_to_align_with_voxel_wall(min_point, max_point)
+
+        interesting_points = np.array(self._point_cloud.points)[self._point_cloud_semantic_labels.sum(axis=1) > 0]
+        min_point = np.min(interesting_points, axis=0)
+        max_point = np.max(interesting_points, axis=0)
+        return self._shift_points_to_align_with_voxel_wall(min_point, max_point)
+
+    def _shift_points_to_align_with_voxel_wall(self, min_point, max_point):
         # Shifting the points so that voxel wall coordinates are divisible by the resolution simplifies raytracing
         min_shift = min_point % self._resolution
         min_point = min_point - min_shift
         max_point = max_point - min_shift
         # The above is enough if _map_size is divisible by _resolution. If not, we have to shift the max point too. 
         max_shift = min_point % self._resolution
-        max_point = max_point - max_shift
-
-        return tuple(min_point), tuple(max_point)  # type: ignore[return-value]
+        max_point = max_point + self._resolution - max_shift
+        return tuple(min_point), tuple(max_point)
 
     def _calculate_point_cloud(self, depth_map: datatypes.DepthMap, pose: datatypes.Pose) -> o3d.geometry.PointCloud:
         depth_image = o3d.geometry.Image(depth_map)
