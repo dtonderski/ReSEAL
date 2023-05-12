@@ -28,7 +28,10 @@
         "ms-python.python",
         "eamodio.gitlens",
         "njqdev.vscode-python-typehint",
-        "github.copilot"
+        "github.copilot",
+        "ms-toolsai.jupyter",
+        "njpwerner.autodocstring",
+        "ms-python.isort"
       ],
       "settings": {
         "editor.rulers": [
