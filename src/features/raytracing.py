@@ -103,7 +103,7 @@ def advance_rays(x_arr: NDArray[Shape["*"], Float],
 def raytrace_3d(ray_directions: NDArray[Shape["3, NRays"], Float],
                 semantic_map_3d: SemanticMap3D,
                 ray_origin_coords: Union[Coordinate3D, NDArray[Shape["3, NRays"], Float]],
-                grid_index_of_origin: GridIndex3D,
+                grid_index_of_origin: Union[GridIndex3D, NDArray[Shape["3"], Int]],
                 map_builder_cfg: CfgNode) \
                 -> Tuple[NDArray[Shape["NRays, NChannels"], Int],                     # type: ignore[name-defined]
                          Dict[int, List[Tuple[float, float, float]]]]:

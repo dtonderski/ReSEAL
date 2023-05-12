@@ -76,7 +76,7 @@ def get_ray_directions_world_coords(sensor_rotation: np.quaternion, #type: ignor
 def propagate_labels(sensor_rotation: np.quaternion,                                        #type: ignore[name-defined]
                      sensor_position: Union[Coordinate3D, NDArray[Shape["3"], Float]],
                      semantic_map_3d: SemanticMap3D,
-                     grid_index_of_origin: GridIndex3D,
+                     grid_index_of_origin: Union[GridIndex3D, NDArray[Shape["3"], Int]],
                      map_builder_cfg: CfgNode,
                      sensor_cfg: CfgNode) -> SemanticMap2D:
     """_summary_
