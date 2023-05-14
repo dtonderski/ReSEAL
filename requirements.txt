@@ -16,6 +16,7 @@ open3d==0.17.0
 # pyvista and jupyter support
 pyvista==0.38.5
 trame==2.4.0
+panel==0.14.4
 matplotlib==3.5.3
 # torchvision needed for maskrcnn
 torchvision==0.14.1
