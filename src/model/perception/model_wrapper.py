@@ -33,12 +33,25 @@ class LabelDict(TypedDict):
     masks: UInt8[torch.Tensor, "N H W"]
 
 class ModelWrapper():
-    """ 
+    """This class wraps the maskrcnn_resnet50_fpn model from torchvision. It follows the pytorch API closely. In 
+    eval mode, it outputs either a SemanticMap2D or a list of SemanticMap2D. In train mode, it outputs a LossDict,
+    exactly as the model from torchvision does.
+
+    Args:
+        model_config (CfgNode): Must contain:
+            USE_INITIAL_TRANSFORMS (bool): decides whether to use the built-in initial transformations.
+            SCORE_THRESHOLD (float): detemines when to discard a prediction.
+            MASK_THRESHOLD (float): determines the threshold for setting a mask element to 0. Usually 0.5.
+        weights (Optional[Union[PurePath, str, MaskRCNN_ResNet50_FPN_Weights]], optional): the weights of the \
+            model. If None, does not load weights, if PurePath or str, loads state_dict from file, and if \
+            MaskRCNN_ResNet50_FPN_Weights, loads weights from torchvision. Defaults to \
+            MaskRCNN_ResNet50_FPN_Weights.COCO_V1.
+        mode (str, optional): starting mode of the model. Defaults to 'eval'.
     """
     @property
     def maskrcnn(self) -> nn.Module:
         return self._maskrcnn
-    
+
     @property
     def mode(self) -> str:
         return self._mode
@@ -53,19 +66,6 @@ class ModelWrapper():
                      = MaskRCNN_ResNet50_FPN_Weights.COCO_V1,
                  mode='eval',
                  device = 'cpu'):
-        """_summary_
-
-        Args:
-            model_config (CfgNode): Must contain:
-                USE_INITIAL_TRANSFORMS (bool): decides whether to use the built-in initial transformations.
-                SCORE_THRESHOLD (float): detemines when to discard a prediction.
-                MASK_THRESHOLD (float): determines the threshold for setting a mask element to 0. Usually 0.5.
-            weights (Optional[Union[PurePath, str, MaskRCNN_ResNet50_FPN_Weights]], optional): the weights of the \
-                model. If None, does not load weights, if PurePath or str, loads state_dict from file, and if \
-                MaskRCNN_ResNet50_FPN_Weights, loads weights from torchvision. Defaults to \
-                MaskRCNN_ResNet50_FPN_Weights.COCO_V1.
-            mode (str, optional): starting mode of the model. Defaults to 'eval'.
-        """
         super().__init__()
         self._model_config = model_config
         self._load_model(weights)
@@ -94,7 +94,7 @@ class ModelWrapper():
             self._mode = 'eval'
         else:
             raise ValueError(f"Unknown mode: {mode}")
-        
+
     def _update_device(self, device):
         if device == 'cpu':
             self._maskrcnn.cpu()
@@ -124,7 +124,7 @@ class ModelWrapper():
 
     def cuda(self):
         self._update_device('cuda')
-        
+
     def cpu(self):
         self._update_device('cpu')
 
@@ -192,7 +192,6 @@ class ModelWrapper():
         for label_dict in labels:
             for key, value in label_dict.items():
                 label_dict[key] = value.to(self._device)
-        
 
     def _preprocess_image(self, image: Union[Float[torch.Tensor, "B C H W"], Float[np.ndarray, "H W C"]]
                           ) -> Float[torch.Tensor, "B C H W"]:

@@ -12,7 +12,16 @@ from src.utils.datatypes import InstanceMap3DCategorical, LabelMap3DCategorical,
 
 
 class LabelGenerator:
-    """ This class will generate maskrcnn labels out of SemanticMap3D, grid_index_of_origin, and poses.
+    """ This class will generate maskrcnn labels out of SemanticMap3D, grid_index_of_origin, and poses. It also \
+        functionality to generate 2d instance maps, which can be useful for visualization. It uses the MapProcessor.
+        
+        Args:
+            semantic_map (SemanticMap3D): the base semantic map to process.
+            grid_index_of_origin (NDArray[Shape["3"], Int]): grid index of the origin of the coordinates system.
+            map_builder_cfg (CfgNode): config of the map builder. Must include RESOLUTION (float).
+            map_processor_cfg (CfgNode): config of the map processor. Must include NO_OBJECT_CONFIDENCE_THRESHOLD \
+                (float), HOLE_VOXEL_THRESHOLD (int), OBJECT_VOXEL_THRESHOLD (int), and DILATE (bool).
+            sensor_cfg (CfgNode): config of the sensor. Must include HEIGHT (int), WIDTH (int), and FOV (float).
     """
     @property
     def categorical_label_map(self) -> LabelMap3DCategorical:
@@ -31,9 +40,10 @@ class LabelGenerator:
         self._sensor_cfg = sensor_cfg
         self._map_processor = MapProcessor(self._semantic_map, self._map_processor_cfg)
 
-    def __call__(self, pose: Pose) -> LabelDict:
+    # TODO: this shouldn't be a __call__
+    def get_label_dict(self, pose: Pose) -> LabelDict:
         instance_map_2d = self.get_instance_map_2d(pose)
-        return self.get_model_labels(instance_map_2d)
+        return self.get_label_dict_from_instance_map(instance_map_2d)
 
     def get_instance_map_2d(self, pose: Pose):
         sensor_position, sensor_rotation = pose
@@ -46,7 +56,7 @@ class LabelGenerator:
             self._sensor_cfg
         )
 
-    def get_model_labels(self, instance_map_2d: SemanticMap2D) -> LabelDict:
+    def get_label_dict_from_instance_map(self, instance_map_2d: SemanticMap2D) -> LabelDict:
         # One hot encode the instance map
         one_hot = np.eye(self.categorical_instance_map.max()+1)[instance_map_2d][..., 0, 1:].astype(bool)
         # Get dict mapping instance index to reseal index

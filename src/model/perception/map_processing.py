@@ -6,6 +6,10 @@ from yacs.config import CfgNode
 from src.utils.datatypes import LabelMap3DCategorical, LabelMap3DOneHot, SemanticMap3D, InstanceMap3DCategorical
 
 class MapProcessor:
+    """ This class processes a semantic map into a categorical label map, applies multiple morphological operations
+    to it and converts it to a categorical instance map. The two maps can be accessed through the properties
+    categorical_label_map and categorical_instance_map.
+    """
     _config: CfgNode
 
     @property
