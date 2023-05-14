@@ -2,12 +2,19 @@ from pathlib import Path
 
 from yacs.config import CfgNode
 
+def default_map_processor_cfg() -> CfgNode:
+    label_map_builder_cfg = CfgNode()
+    label_map_builder_cfg.NO_OBJECT_CONFIDENCE_THRESHOLD = 0.5
+    label_map_builder_cfg.HOLE_VOXEL_THRESHOLD = 10
+    label_map_builder_cfg.OBJECT_VOXEL_THRESHOLD = 10
+    label_map_builder_cfg.DILATE = True
+    return label_map_builder_cfg
 
 def default_map_builder_cfg() -> CfgNode:
     map_builder_cfg = CfgNode()
     map_builder_cfg.RESOLUTION = 0.05  # m per pixel
     map_builder_cfg.MAP_SIZE = (5.0, 2.0, 5.0)  # (x, y, z) in m
-    map_builder_cfg.NUM_SEMANTIC_CLASSES = 10
+    map_builder_cfg.NUM_SEMANTIC_CLASSES = 6
     return map_builder_cfg
 
 
@@ -23,6 +30,11 @@ def default_data_paths_cfg() -> CfgNode:
     data_paths_cfg.INTERIM_DATA_DIR = str(Path("data", "interim"))
     data_paths_cfg.TRAJECTORIES_DIR = str(Path(data_paths_cfg.INTERIM_DATA_DIR, "trajectories"))
 
+    data_paths_cfg.HM3DSEM_MAPPING_PATH = str(Path(data_paths_cfg.RAW_DATA_DIR, "hm3dsem_category_mappings.tsv"))
+    data_paths_cfg.MATTERPORT_MAPPING_PATH = str(Path(data_paths_cfg.RAW_DATA_DIR, "mpcat40.tsv"))
+    data_paths_cfg.MATTERPORT_TO_RESEAL_MAPPING_PATH = str(Path(data_paths_cfg.RAW_DATA_DIR, "mpcat40_to_reseal.tsv"))
+    data_paths_cfg.RESEAL_MAPPING_PATH = str(Path(data_paths_cfg.RAW_DATA_DIR, "reseal.tsv"))
+    data_paths_cfg.MASKRCNN_TO_RESEAL_MAPPING_PATH = str(Path(data_paths_cfg.RAW_DATA_DIR, "maskrcnn_to_reseal.tsv"))
     return data_paths_cfg
 
 
@@ -33,11 +45,6 @@ def default_sim_cfg() -> CfgNode:
     sim_cfg.TURN_ANGLE_DISPLACEMENT = 30 #deg
     sim_cfg.DEFAULT_AGENT_ID = 0
     sim_cfg.DEFAULT_POSITION = [-0.6, 0.0, 0.0]  # m
-    sim_cfg.SENSOR_CFG = CfgNode()
-    sim_cfg.SENSOR_CFG.WIDTH = 256  # px
-    sim_cfg.SENSOR_CFG.HEIGHT = 256  # px
-    sim_cfg.SENSOR_CFG.HFOV = 90  # px
-
     return sim_cfg
 
 def default_sensor_cfg() -> CfgNode:
@@ -46,6 +53,7 @@ def default_sensor_cfg() -> CfgNode:
     sensor_cfg.HEIGHT = 256 #px
     sensor_cfg.HFOV = 90 #deg
     sensor_cfg.SENSOR_HEIGHT = 0.88 #m
+    sensor_cfg.ORTHO_SCALE = 0.1 #m/px
     return sensor_cfg
 
 def default_action_module_cfg() -> CfgNode:

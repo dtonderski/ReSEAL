@@ -1,0 +1,81 @@
+maskrcnn_index	name	reseal_name
+1	person	unlabeled
+2	bicycle	unlabeled
+3	car	unlabeled
+4	motorcycle	unlabeled
+5	airplane	unlabeled
+6	bus	unlabeled
+7	train	unlabeled
+8	truck	unlabeled
+9	boat	unlabeled
+10	traffic light	unlabeled
+11	fire hydrant	unlabeled
+12	stop sign	unlabeled
+13	parking meter	unlabeled
+14	bench	unlabeled
+15	bird	unlabeled
+16	cat	unlabeled
+17	dog	unlabeled
+18	horse	unlabeled
+19	sheep	unlabeled
+20	cow	unlabeled
+21	elephant	unlabeled
+22	bear	unlabeled
+23	zebra	unlabeled
+24	giraffe	unlabeled
+25	backpack	unlabeled
+26	umbrella	unlabeled
+27	handbag	unlabeled
+28	tie	unlabeled
+29	suitcase	unlabeled
+30	frisbee	unlabeled
+31	skis	unlabeled
+32	snowboard	unlabeled
+33	sports ball	unlabeled
+34	kite	unlabeled
+35	baseball bat	unlabeled
+36	baseball glove	unlabeled
+37	skateboard	unlabeled
+38	surfboard	unlabeled
+39	tennis racket	unlabeled
+40	bottle	unlabeled
+41	wine glass	unlabeled
+42	cup	unlabeled
+43	fork	unlabeled
+44	knife	unlabeled
+45	spoon	unlabeled
+46	bowl	unlabeled
+47	banana	unlabeled
+48	apple	unlabeled
+49	sandwich	unlabeled
+50	orange	unlabeled
+51	broccoli	unlabeled
+52	carrot	unlabeled
+53	hot dog	unlabeled
+54	pizza	unlabeled
+55	donut	unlabeled
+56	cake	unlabeled
+57	chair	chair
+58	couch	couch
+59	potted plant	potted plant
+60	bed	bed
+61	dining table	unlabeled
+62	toilet	toilet
+63	tv	tv
+64	laptop	unlabeled
+65	mouse	unlabeled
+66	remote	unlabeled
+67	keyboard	unlabeled
+68	cell phone	unlabeled
+69	microwave	unlabeled
+70	oven	unlabeled
+71	toaster	unlabeled
+72	sink	unlabeled
+73	refrigerator	unlabeled
+74	book	unlabeled
+75	clock	unlabeled
+76	vase	unlabeled
+77	scissors	unlabeled
+78	teddy bear	unlabeled
+79	hair drier	unlabeled
+80	toothbrush	unlabeled

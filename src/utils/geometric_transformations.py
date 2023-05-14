@@ -29,6 +29,14 @@ def grid_indices_to_world_coordinates(
 
 
 class HomogenousTransformFactory:
+
+    @staticmethod
+    def rotate_180_about_x() -> HomogenousTransform:
+        homogenous_matrix = np.eye(4)
+        homogenous_matrix[1, 1] = -1
+        homogenous_matrix[2, 2] = -1
+        return homogenous_matrix
+
     @staticmethod
     def from_pose(pose: Pose, translate_first: bool = True) -> HomogenousTransform:
         """Returns a 4x4 homogenous matrix from a pose consisting of a translation vector and a rotation quaternion"""

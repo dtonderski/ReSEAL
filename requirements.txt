@@ -13,3 +13,12 @@ gym==0.21.0
 stable-baselines3==1.8.0
 # open3d for map builder
 open3d==0.17.0
+# pyvista and jupyter support
+pyvista==0.38.5
+trame==2.4.0
+panel==0.14.4
+matplotlib==3.5.3
+# torchvision needed for maskrcnn
+torchvision==0.14.1
+# jaxtyping is recommended for torch tensor shape annotations
+jaxtyping==0.2.12

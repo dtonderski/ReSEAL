@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 import quaternion
 from nptyping import Float, Int, NDArray, Shape
@@ -42,24 +44,16 @@ def get_ray_directions_world_coords(sensor_rotation: np.quaternion, #type: ignor
         camera rotation. Note that since we are only getting the direction of the rays, the camera position is not \
         needed.
 
+        The camera sensor coordinate system is as follows: x points to the right, y points up, z points in the \
+        opposite direction of the camera. This is consistent with the habitat sensor coordinate system.
+
+        The voxel grid coordinate system is consistent with the habitat world coordinate system, except the z-axis is \
+        flipped. Therefore, to convert a vector from sensor coordinates to voxel grid coordinates, we can simply use \
+        the quaternion and translate it to a rotation matrix, multiply the rotation matrix with the vector, and flip \
+        the z direction.
+
         For the formula for the calculation of the rotation matrix from camera coordinates to world coordinates, see \
         https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle.
-
-        Since the y axis of the camera is always identical to the y axis of the world, we must always rotate around it.
-        Therefore, we have u = (0,1,0), so we get:
-            ┌                    ┐
-            | cos(θ)  0   sin(θ) |
-        R = |   0     1     0    | ,
-            |-sin(θ)  0   cos(θ) |
-            └                    ┘
-        where θ is the angle of rotation. Next, we have that the z axis of the camera in world coordiantes is given by \
-        (sin(θ), 0, cos(θ)), which can easily be verified by R * (0,0,1). The first three elements of the quaternion \
-        are the negative of that, so we have q = (-sin(θ), 0, -cos(θ), 0). Therefore:
-            ┌                    ┐   ┌             ┐
-            | cos(θ)  0   sin(θ) |   | -q2  0  -q0 |
-        R = |   0     1     0    | = |  0   1   0  |.
-            |-sin(θ)  0   cos(θ) |   | q0   0  -q2 |
-            └                    ┘   └             ┘
 
     Args:
         sensor_rotation (np.quaternion): quaternion where the first three elements represent the z direction of the \
@@ -71,24 +65,20 @@ def get_ray_directions_world_coords(sensor_rotation: np.quaternion, #type: ignor
             the direction of the ray corresponding to the pixel at index [i,j] in the image.
     """
     ray_directions_sensor = get_ray_directions_sensor_coords(sensor_cfg)
-    q_float = quaternion.as_float_array(sensor_rotation)
 
-    rotation_matrix = np.eye(3)
-    rotation_matrix[0,0] = -q_float[2]
-    rotation_matrix[0,2] = -q_float[0]
-    rotation_matrix[2,0] = q_float[0]
-    rotation_matrix[2,2] = -q_float[2]
-
-    ray_directions_world = np.einsum('ij, jkl ->ikl', rotation_matrix, ray_directions_sensor)
+    rotation_matrix = quaternion.as_rotation_matrix(sensor_rotation)
+    ray_directions_world = np.einsum('nm, mhw ->nhw', rotation_matrix, ray_directions_sensor)
+    #ray_directions_world[-1] = -ray_directions_world[-1]
 
     return ray_directions_world
 
 
 def propagate_labels(sensor_rotation: np.quaternion,                                        #type: ignore[name-defined]
-                     sensor_position: Coordinate3D,
+                     sensor_position: Union[Coordinate3D, NDArray[Shape["3"], Float]],
                      semantic_map_3d: SemanticMap3D,
-                     grid_index_of_origin: GridIndex3D,
-                     sim_cfg: CfgNode) -> SemanticMap2D:
+                     grid_index_of_origin: Union[GridIndex3D, NDArray[Shape["3"], Int]],
+                     map_builder_cfg: CfgNode,
+                     sensor_cfg: CfgNode) -> SemanticMap2D:
     """_summary_
 
     Args:
@@ -97,20 +87,23 @@ def propagate_labels(sensor_rotation: np.quaternion,                            
         sensor_position (Coordinate3D): 3d coordinates of the sensor position, which will be the origin of the rays
         semantic_map_3d (SemanticMap3D): semantic map of the scene.
         grid_index_of_origin (GridIndex3D): grid index of the origin of the scene.
-        sim_cfg (CfgNode): simulation config, must contain RESOLUTION and SENSOR_CFG, and sim_cfg.SENSOR_CFG \
-            must contain WIDTH, HEIGHT, HFOV
+        map_builder_cfg (CfgNode): map builder config, must contain RESOLUTION.
+        sensor_cfg (CfgNode): sensor config, must contain WIDTH, HEIGHT, HFOV.
 
     Returns:
         SemanticMap2D: semantic 2d map of the scene from the viewpoint of the sensor.
     """
-    ray_directions = get_ray_directions_world_coords(sensor_rotation, sim_cfg.SENSOR_CFG)
+    ray_directions = get_ray_directions_world_coords(sensor_rotation, sensor_cfg)
 
     ray_directions_flat = ray_directions.reshape(3, -1)
 
-    ray_labels, _ = raytrace_3d(ray_directions_flat, semantic_map_3d, sensor_position, grid_index_of_origin,
-                              sim_cfg, False)
+    if isinstance(sensor_position, np.ndarray):
+        sensor_position = tuple(sensor_position) #type: ignore[assignment]
 
-    return ray_labels_to_semantic_map_2d(ray_labels, sim_cfg.SENSOR_CFG)
+    ray_labels, _ = raytrace_3d(ray_directions_flat, semantic_map_3d, sensor_position, grid_index_of_origin,
+                                map_builder_cfg)
+
+    return ray_labels_to_semantic_map_2d(ray_labels, sensor_cfg)
 
 def ray_labels_to_semantic_map_2d(ray_labels: NDArray[Shape["NRays, NChannels"], Int],
                                    sensor_cfg: CfgNode) -> SemanticMap2D:
