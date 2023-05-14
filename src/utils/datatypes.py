@@ -2,9 +2,20 @@ from typing import Mapping, Tuple
 
 import numpy as np
 import quaternion  # pylint: disable=unused-import
-from nptyping import Float, NDArray, Shape
+from nptyping import Bool, Float, NDArray, Shape, Int
 
-SemanticMap3D = NDArray[Shape["NumPixelsX, NumPixelsY, NumPixelsZ, NumChannels"], Float]
+SemanticMap3D = NDArray[Shape["NumVoxelsX, NumVoxelsY, NumVoxelsZ, NumChannels"], Float]
+
+# In last channel, first dimension represents occupancy, second represents semantic label
+LabelMap3DCategorical = NDArray[Shape["NumVoxelsX, NumVoxelsY, NumVoxelsZ, 2"], Int]
+# OneHot encoding is going to be the standard since it is easier to use with binary dilation
+LabelMap3DOneHot = NDArray[Shape["NumVoxelsX, NumVoxelsY, NumVoxelsZ, [occupancy, numSemanticLabels]"], Bool]
+# Instance maps, similar to LabelMaps but with instance IDs instead of semantic labels
+InstanceMap3DCategorical = NDArray[Shape["NumVoxelsX, NumVoxelsY, NumVoxelsZ, 2"], Int]
+InstanceMap3DOneHot = NDArray[Shape["NumVoxelsX, NumVoxelsY, NumVoxelsZ, NumInstances"], Bool]
+InstanceMap2DOneHot = NDArray[Shape["Height, Width, NumInstances"], Bool]
+InstanceMap2DCategorical = NDArray[Shape["Height, Width"], Int]
+
 Coordinate2D = Tuple[float, float]
 Coordinate3D = Tuple[float, float, float]
 CoordinatesMapping2Dto3D = Mapping[Coordinate2D, Coordinate3D]
