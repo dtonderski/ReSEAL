@@ -13,7 +13,7 @@ def default_map_processor_cfg() -> CfgNode:
 def default_map_builder_cfg() -> CfgNode:
     map_builder_cfg = CfgNode()
     map_builder_cfg.RESOLUTION = 0.05  # m per pixel
-    map_builder_cfg.MAP_SIZE = (5.0, 2.0, 5.0)  # (x, y, z) in m
+    map_builder_cfg.MAP_SIZE = (2.0, 2.0, 2.0)  # (x, y, z) in m
     map_builder_cfg.NUM_SEMANTIC_CLASSES = 6
     return map_builder_cfg
 

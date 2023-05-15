@@ -27,6 +27,7 @@ class SemanticMap3DBuilder:
     def __init__(self, map_builder_cfg: CfgNode, sim_cfg: CfgNode) -> None:
         self._resolution = map_builder_cfg.RESOLUTION  # m per voxel
         self._num_semantic_classes = map_builder_cfg.NUM_SEMANTIC_CLASSES
+        self._map_size = np.array(map_builder_cfg.MAP_SIZE) / 2
         self._intrinsic = get_camera_intrinsic_from_cfg(sim_cfg.SENSOR_CFG)
 
         # Master stores all points added to the map builder
@@ -70,6 +71,42 @@ class SemanticMap3DBuilder:
         if self._semantic_map is None:
             raise ValueError("Trying to access semantic map before it is calculated!")
         return self._semantic_map
+
+    def semantic_map_at_pose(self, pose: datatypes.Pose) -> datatypes.SemanticMap3D:
+        """Calculates the voxel semantic map at a given pose.
+        The size of the map is according to the MAP_SIZE configuration (given in m)
+        """
+        if self._semantic_map is None:
+            raise ValueError("Trying to access semantic map before it is calculated!")
+        position = np.array(pose[0])
+        map_bound_min = position - self._map_size
+        map_bound_max = position + self._map_size
+        grid_index_of_origin = self.get_grid_index_of_origin()
+        min_index = coordinates_to_grid_indices(map_bound_min.T, grid_index_of_origin, self._resolution)
+        max_index = coordinates_to_grid_indices(map_bound_max.T, grid_index_of_origin, self._resolution)
+        map_shape = max_index - min_index
+        map_shape = [map_shape[0], map_shape[1], map_shape[2], self._num_semantic_classes + 1]
+        map_at_pose = np.zeros(map_shape)
+        semantic_map_shape = np.array(self._semantic_map.shape[:-1])
+        min_offset = np.zeros(3, dtype=np.uint8)
+        max_offset = np.zeros(3, dtype=np.uint8)
+        if np.any(min_index < 0):
+            dim_with_min_offset = min_index < 0
+            min_offset[dim_with_min_offset] = -min_index[dim_with_min_offset]
+            min_index[dim_with_min_offset] = 0
+        if np.any(max_index >= semantic_map_shape):
+            dim_with_max_offset = max_index >= semantic_map_shape
+            max_offset[dim_with_max_offset] = max_index[dim_with_max_offset] - semantic_map_shape[dim_with_max_offset]
+            max_index[dim_with_max_offset] = semantic_map_shape[dim_with_max_offset]
+        map_at_pose[
+            min_offset[0] : map_shape[0] - max_offset[0],
+            min_offset[1] : map_shape[1] - max_offset[1],
+            min_offset[2] : map_shape[2] - max_offset[2],
+            :,
+        ] = self._semantic_map[min_index[0] : max_index[0], min_index[1] : max_index[1], min_index[2] : max_index[2], :]
+        if np.any(min_index < 0) or np.any(max_index > self._semantic_map.shape[:-1]):
+            raise RuntimeError("Invalid pose (%s, %s, %s)", min_index, max_index, self._semantic_map.shape)
+        return map_at_pose
 
     def clear(self) -> None:
         """Resets the map builder, clearing the point clouds, the semantic map, and the semantic labels"""
@@ -301,14 +338,18 @@ class SemanticMap3DBuilder:
         # Depth information
         point_cloud_camera[:, 2] = depth_map.reshape(-1)
         # Transform from indices to coordinates
-        point_cloud_camera[:, 0] = (point_cloud_camera[:, 0] - self._intrinsic[0, 0]) *  point_cloud_camera[:,2]/ self._intrinsic[0, 2]
-        point_cloud_camera[:, 1] = (point_cloud_camera[:, 1] - self._intrinsic[1, 1]) *  point_cloud_camera[:,2]/ self._intrinsic[1, 2]
+        point_cloud_camera[:, 0] = (
+            (point_cloud_camera[:, 0] - self._intrinsic[0, 0]) * point_cloud_camera[:, 2] / self._intrinsic[0, 2]
+        )
+        point_cloud_camera[:, 1] = (
+            (point_cloud_camera[:, 1] - self._intrinsic[1, 1]) * point_cloud_camera[:, 2] / self._intrinsic[1, 2]
+        )
         point_cloud_camera[:, 3] = 1
         point_cloud_world = camera_to_world @ point_cloud_camera.T
         # Filter out invalid points
         valid_pixel_indices = self._calc_valid_pixel_indices(depth_map).flatten()
         point_cloud_world = point_cloud_world.T[valid_pixel_indices, :3]
-        return point_cloud_world 
+        return point_cloud_world
 
     def _update_point_cloud_semantic_labels(
         self, semantic_map: datatypes.SemanticMap2D, depth_map: datatypes.DepthMap

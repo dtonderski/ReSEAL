@@ -23,7 +23,7 @@ def main(
     map_builder_cfg = config.default_map_builder_cfg()
     map_builder_cfg.NUM_SEMANTIC_CLASSES = 3
     map_builder_cfg.RESOLUTION = 0.05
-    map_builder_cfg.MAP_SIZE = [5.0, 3.0, 5.0]
+    map_builder_cfg.MAP_SIZE = [2.0, 2.0, 2.0]
     sim_cfg = config.default_sim_cfg()
     map_builder = mapping.SemanticMap3DBuilder(map_builder_cfg, sim_cfg)
 
@@ -47,12 +47,12 @@ def main(
             semantic_map = cv2.cvtColor(semantic_map, cv2.COLOR_BGR2RGB) / 255  # pylint: disable=no-member
         pose = (positions[i], rotations[i])
         map_builder.update_point_cloud(semantic_map, depth_map, pose)
-    map_builder.update_kdtree()
+    map_builder.update_semantic_map()
 
     # Save map
     for i in trange(num_steps):
         pose = (positions[i], rotations[i])
-        semantic_voxel_grid = map_builder.get_semantic_map(pose)
+        semantic_voxel_grid = map_builder.semantic_map_at_pose(pose)
         np.save(data_paths.voxel_grid_dir / f"{i}.npy", semantic_voxel_grid)
         # Save image of map from top down
         top_down_map = semantic_voxel_grid.max(axis=1)[:,:,1:] * 255
