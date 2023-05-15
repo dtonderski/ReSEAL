@@ -31,6 +31,8 @@
         "github.copilot",
         "ms-toolsai.jupyter",
         "njpwerner.autodocstring",
+        "ms-python.pylint",
+        "ms-python.black-formatter",
         "ms-python.isort"
       ],
       "settings": {

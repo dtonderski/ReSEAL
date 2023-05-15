@@ -9,12 +9,15 @@ We use the `devcontainer` feature is `vscode` for the development environment.
 For more information about devloping inside a container, we refer to [[link]](https://code.visualstudio.com/docs/devcontainers/containers#_create-a-devcontainerjson-file).
 The only requirement is installing the `ms-vscode-remote.remote-containers` extension in `vscode`.
 
-The development container is built on the [[AI Habitat Challenge 2023]](https://aihabitat.org/challenge/2023/) Docker image [[Docker Hub]](https://aihabitat.org/challenge/2023/).
+~~The development container is built on the [[AI Habitat Challenge 2023]](https://aihabitat.org/challenge/2023/) Docker image [[Docker Hub]](https://aihabitat.org/challenge/2023/)~~
+
+We define our own Docker image in `docker/Dockerfile.cuda`, which is built on Nvidia's [CudaGL containers](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cudagl).
+
+To build the image, run the following `tools/build_images.sh` script.
 To download the image, run the following command in the terminal:
 ```bash
-docker pull fairembodied/habitat-challenge:habitat_navigation_2023_base_docker
+docker pull dominic4810/reseal:cuda-v1.0
 ```
-For more information about working with this image, we refer to this [[guide]](https://github.com/facebookresearch/habitat-lab#docker-setup).
 
 Run the following command in `vscode` to build the container and start developing in the `devcontainer`:
 ```

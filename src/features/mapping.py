@@ -1,7 +1,6 @@
 from typing import List, Tuple
 
 import numpy as np
-import open3d as o3d
 import quaternion  # pylint: disable=unused-import
 from nptyping import Float, Int, NDArray, Shape
 from numba import njit
@@ -13,7 +12,7 @@ from ..utils.geometric_transformations import HomogenousTransformFactory, coordi
 
 
 class SemanticMap3DBuilder:
-    """ Builds a 3D semantic map from a sequence of depth maps and semantic maps. New information is added using the 
+    """Builds a 3D semantic map from a sequence of depth maps and semantic maps. New information is added using the
     `update_point_cloud` method, and the semantic map is updated using the `update_semantic_map` method. The semantic
     map can be accessed via the `semantic_map` property, and the underlying point cloud via the `point_cloud` property.
 
@@ -31,11 +30,11 @@ class SemanticMap3DBuilder:
         self._intrinsic = get_camera_intrinsic_from_cfg(sim_cfg.SENSOR_CFG)
 
         # Master stores all points added to the map builder
-        self._master_point_cloud = o3d.geometry.PointCloud()
+        self._master_point_cloud = np.zeros((0, 3))
         self._master_point_cloud_semantic_labels = np.zeros((0, self._num_semantic_classes))
 
         # Temporary stores only the points that have not been added to the semantic map
-        self._temporary_point_cloud = o3d.geometry.PointCloud()
+        self._temporary_point_cloud = np.zeros((0, 3))
         # This is a list, as adding to lists is way faster than concatenating numpy arrays, so
         # concatenation is only done when needed (i.e. when the semantic map is updated).
         self._temporary_point_cloud_semantic_labels_list: List = []
@@ -43,14 +42,9 @@ class SemanticMap3DBuilder:
         self._semantic_map_bounds = None
 
     @property
-    def point_cloud(self) -> o3d.geometry.PointCloud:
-        """o3d.geometry.PointCloud: Point cloud built from depth maps and semantic maps"""
+    def point_cloud(self) -> NDArray[Shape["NumPoints, 3"], Float]:  # type: ignore[name-defined]
+        """NDArray[Shape["NumPoints, 3"], Float]: Point cloud built from depth maps and semantic maps"""
         return self._master_point_cloud
-
-    @property
-    def point_cloud_coordinates(self) -> NDArray[Shape["NumPoints, 3"], Float]:  # type: ignore[name-defined]
-        """NDArray[Shape["NumPoints, 3"], Float]: Point cloud coordinates"""
-        return np.asarray(self._master_point_cloud.points)
 
     # type: ignore[name-defined]
     @property
@@ -79,8 +73,8 @@ class SemanticMap3DBuilder:
 
     def clear(self) -> None:
         """Resets the map builder, clearing the point clouds, the semantic map, and the semantic labels"""
-        self._master_point_cloud.clear()
-        self._temporary_point_cloud.clear()
+        self._master_point_cloud = np.zeros((0, 3))
+        self._temporary_point_cloud = np.zeros((0, 3))
 
         self._master_point_cloud_semantic_labels = np.zeros((0, self._num_semantic_classes))
         self._temporary_point_cloud_semantic_labels_list.clear()
@@ -89,7 +83,10 @@ class SemanticMap3DBuilder:
         self._semantic_map_bounds = None
 
     def update_point_cloud(
-        self, semantic_map: datatypes.SemanticMap2D, depth_map: datatypes.DepthMap, pose: datatypes.Pose,
+        self,
+        semantic_map: datatypes.SemanticMap2D,
+        depth_map: datatypes.DepthMap,
+        pose: datatypes.Pose,
     ):
         """Updates the point cloud from a depth map, semantic map and pose of agent. Adds the points to the temporary
         point cloud, and the semantic labels to the temporary semantic labels list.
@@ -100,19 +97,20 @@ class SemanticMap3DBuilder:
             pose (datatypes.Pose): Pose of agent, i.e. (position, orientation)
         """
         point_cloud = self._calculate_point_cloud(depth_map, pose)
-        self._temporary_point_cloud.points.extend(point_cloud.points)
+        self._temporary_point_cloud = np.concatenate([self._temporary_point_cloud, point_cloud])
         self._update_point_cloud_semantic_labels(semantic_map, depth_map)
 
     def update_semantic_map(self):
-        """ Updates the semantic map from the temporary point cloud and semantic labels. First, reshapes the map to
+        """Updates the semantic map from the temporary point cloud and semantic labels. First, reshapes the map to
         fit the new points, then updates the semantic labels of the voxels in the map using the temporary semantic
         labels list and the temporary point cloud.
         """
+
         @njit()
         def update_semantic_map_loop(semantic_map, grid_indices, semantic_labels):
             """Numba loop to update the semantic map from the temporary point cloud and semantic labels."""
-            for (i,j,k), label in zip(grid_indices, semantic_labels):
-                semantic_map[i,j,k,1:] = np.maximum(semantic_map[i,j,k,1:], label)
+            for (i, j, k), label in zip(grid_indices, semantic_labels):
+                semantic_map[i, j, k, 1:] = np.maximum(semantic_map[i, j, k, 1:], label)
             return semantic_map
 
         if self._semantic_map is None:
@@ -126,11 +124,10 @@ class SemanticMap3DBuilder:
 
         # Grid index of origin is needed to calculate grid indices of the new points
         grid_index_of_origin = self.get_grid_index_of_origin()
-        grid_indices = coordinates_to_grid_indices(np.asarray(self._temporary_point_cloud.points),
-                                                   grid_index_of_origin, self._resolution)
+        grid_indices = coordinates_to_grid_indices(self._temporary_point_cloud, grid_index_of_origin, self._resolution)
 
         # Set occupancy of new points to 1
-        self._semantic_map[grid_indices[:, 0],grid_indices[:, 1],grid_indices[:, 2], 0] = 1
+        self._semantic_map[grid_indices[:, 0], grid_indices[:, 1], grid_indices[:, 2], 0] = 1
 
         temporary_point_cloud_semantic_labels = np.concatenate(self._temporary_point_cloud_semantic_labels_list)
         points_with_semantic_info_mask = np.sum(temporary_point_cloud_semantic_labels, axis=-1) > 0
@@ -138,9 +135,9 @@ class SemanticMap3DBuilder:
         grid_indices_with_semantic_info = grid_indices[points_with_semantic_info_mask]
         semantic_labels_with_semantic_info = temporary_point_cloud_semantic_labels[points_with_semantic_info_mask]
 
-        self._semantic_map = update_semantic_map_loop(self._semantic_map,
-                                                      grid_indices_with_semantic_info,
-                                                      semantic_labels_with_semantic_info)
+        self._semantic_map = update_semantic_map_loop(
+            self._semantic_map, grid_indices_with_semantic_info, semantic_labels_with_semantic_info
+        )
 
         self._sync_master_point_cloud_and_labels(temporary_point_cloud_semantic_labels)
 
@@ -165,7 +162,8 @@ class SemanticMap3DBuilder:
         return -grid_index_of_min_position_relative_to_origin
 
     def _sync_master_point_cloud_and_labels(
-        self, temporary_point_cloud_semantic_labels: NDArray[Shape["NumPoints, NumSemanticClasses"], Int]):
+        self, temporary_point_cloud_semantic_labels: NDArray[Shape["NumPoints, NumSemanticClasses"], Int]
+    ):
         """ Syncs the master point cloud and semantic labels with the temporary point cloud and semantic labels and \
         clears the temporary point cloud and semantic labels.
 
@@ -174,15 +172,16 @@ class SemanticMap3DBuilder:
                 semantic labels for the temporary point cloud. Not using _temporary_point_cloud_semantic_labels_list \
                 so we do not have to concatenate it again.
         """
-        self._master_point_cloud.points.extend(self._temporary_point_cloud.points)
-        self._temporary_point_cloud.clear()
+        self._master_point_cloud = np.concatenate([self._master_point_cloud, self._temporary_point_cloud])
+        self._temporary_point_cloud = np.zeros((0, 3))
 
         if self._master_point_cloud_semantic_labels is None:
             self._master_point_cloud_semantic_labels = temporary_point_cloud_semantic_labels
             return
 
-        self._master_point_cloud_semantic_labels = np.concatenate([self._master_point_cloud_semantic_labels,
-                                                                   temporary_point_cloud_semantic_labels])
+        self._master_point_cloud_semantic_labels = np.concatenate(
+            [self._master_point_cloud_semantic_labels, temporary_point_cloud_semantic_labels]
+        )
         self._temporary_point_cloud_semantic_labels_list.clear()
 
     def _reshape_semantic_map(self, new_semantic_map_bounds: Tuple[datatypes.Coordinate3D, datatypes.Coordinate3D]):
@@ -199,25 +198,29 @@ class SemanticMap3DBuilder:
         # lose any information. We need to make the final semantic map smaller than the new bounds, because
         # otherwise we will still get the index out of bounds error.
         new_map_shape = self._calculate_map_shape(new_semantic_map_bounds)
-        new_map_shape_corrected = (new_map_shape[0]+2, new_map_shape[1]+2, new_map_shape[2]+2, new_map_shape[3])
+        new_map_shape_corrected = (new_map_shape[0] + 2, new_map_shape[1] + 2, new_map_shape[2] + 2, new_map_shape[3])
 
         new_semantic_map = np.zeros(new_map_shape_corrected)
 
         old_min_position, _ = self._semantic_map_bounds
         new_min_position = new_semantic_map_bounds[0]
 
-        grid_index_of_old_min_position_relative_to_origin = coordinates_to_grid_indices(np.array(old_min_position),
-                                                                                        (0, 0, 0), self._resolution)
-        grid_index_of_new_min_position_relative_to_origin = coordinates_to_grid_indices(np.array(new_min_position),
-                                                                                        (0, 0, 0), self._resolution)
+        grid_index_of_old_min_position_relative_to_origin = coordinates_to_grid_indices(
+            np.array(old_min_position), (0, 0, 0), self._resolution
+        )
+        grid_index_of_new_min_position_relative_to_origin = coordinates_to_grid_indices(
+            np.array(new_min_position), (0, 0, 0), self._resolution
+        )
 
-        start = (grid_index_of_old_min_position_relative_to_origin - grid_index_of_new_min_position_relative_to_origin)
+        start = grid_index_of_old_min_position_relative_to_origin - grid_index_of_new_min_position_relative_to_origin
 
         # TODO: if this is a bottleneck, change to padding
-        new_semantic_map[start[0]:start[0] + self._semantic_map.shape[0],
-                         start[1]:start[1] + self._semantic_map.shape[1],
-                         start[2]:start[2] + self._semantic_map.shape[2],
-                         :] = self._semantic_map
+        new_semantic_map[
+            start[0] : start[0] + self._semantic_map.shape[0],
+            start[1] : start[1] + self._semantic_map.shape[1],
+            start[2] : start[2] + self._semantic_map.shape[2],
+            :,
+        ] = self._semantic_map
 
         # Undo the above correction.
         self._semantic_map = new_semantic_map[:-1, :-1, :-1, :]
@@ -233,13 +236,13 @@ class SemanticMap3DBuilder:
         Returns:
             Tuple[datatypes.Coordinate3D, datatypes.Coordinate3D]: New semantic map bounds.
         """
-        if len(self._temporary_point_cloud.points) == 0:
+        if len(self._temporary_point_cloud) == 0:
             if self._semantic_map_bounds is None:
                 raise ValueError("Trying to calculate semantic map bounds before any points have been added!")
             return self._semantic_map_bounds
 
-        temporary_min_point = np.min(self._temporary_point_cloud.points, axis=0)
-        temporary_max_point = np.max(self._temporary_point_cloud.points, axis=0)
+        temporary_min_point = np.min(self._temporary_point_cloud, axis=0)
+        temporary_max_point = np.max(self._temporary_point_cloud, axis=0)
 
         if self._semantic_map_bounds is None:
             return self._shift_points_to_align_with_voxel_wall(temporary_min_point, temporary_max_point)
@@ -250,15 +253,14 @@ class SemanticMap3DBuilder:
         return self._shift_points_to_align_with_voxel_wall(min_point, max_point)
 
     def _initialize_semantic_map(self):
-        """ Initializes an empty semantic map
-        """
+        """Initializes an empty semantic map"""
         self._semantic_map_bounds = self._calc_new_semantic_map_bounds()
         self._semantic_map = np.zeros(self.semantic_map_3d_map_shape)
 
     def _shift_points_to_align_with_voxel_wall(
         self, min_point: NDArray[Shape["3"], Float], max_point: NDArray[Shape["3"], Float]
-        ) -> Tuple[datatypes.Coordinate3D, datatypes.Coordinate3D]:
-        """ Shifts the min point and the max point such that they are divisible by the resolution. This is needed for
+    ) -> Tuple[datatypes.Coordinate3D, datatypes.Coordinate3D]:
+        """Shifts the min point and the max point such that they are divisible by the resolution. This is needed for
         raytracing.
 
         Args:
@@ -275,32 +277,43 @@ class SemanticMap3DBuilder:
         # The above is enough if _map_size is divisible by _resolution. If not, we have to shift the max point too.
         max_shift = max_point % self._resolution
         max_point = max_point + self._resolution - max_shift
-        return tuple(min_point), tuple(max_point) # type: ignore [return-value]
+        return tuple(min_point), tuple(max_point)  # type: ignore [return-value]
 
-    def _calculate_point_cloud(self, depth_map: datatypes.DepthMap, pose: datatypes.Pose) -> o3d.geometry.PointCloud:
-        """ Calculates a point cloud from a depth map and a pose.
+    def _calculate_point_cloud(self, depth_map: datatypes.DepthMap, pose: datatypes.Pose) -> NDArray[Shape["NumPoints, 3"], Float]:  # type: ignore [name-defined]
+        """Calculates a point cloud from a depth map and a pose.
 
         Args:
             depth_map (datatypes.DepthMap): the current depth map.
             pose (datatypes.Pose): the pose of the depth sensor.
 
         Returns:
-            o3d.geometry.PointCloud: the calculated point cloud.
+            NDArray["NumPoints", 3]: the calculated point cloud.
         """
-        depth_image = o3d.geometry.Image(depth_map)
         # in habitat, z-axis is to the back of agent
-        world_to_agent = HomogenousTransformFactory.from_pose(pose, True)
-        # in open3d, z-axis is to the front of camera
-        world_to_camera = world_to_agent @ HomogenousTransformFactory.rotate_180_about_x()
-        extrinsic = np.linalg.inv(world_to_camera)
-        point_cloud = o3d.geometry.PointCloud.create_from_depth_image(
-            depth_image, self._intrinsic, extrinsic, project_valid_depth_only=True
-        )
-        return point_cloud
+        agent_to_world = HomogenousTransformFactory.from_pose(pose, True)
+        # in our implementation, z-axis is to the front of camera
+        camera_to_world = agent_to_world @ HomogenousTransformFactory.rotate_180_about_x()
+        # Homogenous coordinates of every point in depth image
+        point_cloud_camera = np.zeros((depth_map.shape[0] * depth_map.shape[1], 4))
+        # Get index of each point. Ie the first two columns are (x, y) coord
+        point_cloud_camera[:, :2] = np.indices((depth_map.shape[0], depth_map.shape[1])).reshape(2, -1).T
+        point_cloud_camera[:, :2] = point_cloud_camera[:, [1, 0]]  # Rearrange because numpy gives (y, x)
+        # Depth information
+        point_cloud_camera[:, 2] = depth_map.reshape(-1)
+        # Transform from indices to coordinates
+        point_cloud_camera[:, 0] = (point_cloud_camera[:, 0] - self._intrinsic[0, 0]) *  point_cloud_camera[:,2]/ self._intrinsic[0, 2]
+        point_cloud_camera[:, 1] = (point_cloud_camera[:, 1] - self._intrinsic[1, 1]) *  point_cloud_camera[:,2]/ self._intrinsic[1, 2]
+        point_cloud_camera[:, 3] = 1
+        point_cloud_world = camera_to_world @ point_cloud_camera.T
+        # Filter out invalid points
+        valid_pixel_indices = self._calc_valid_pixel_indices(depth_map).flatten()
+        point_cloud_world = point_cloud_world.T[valid_pixel_indices, :3]
+        return point_cloud_world 
 
-    def _update_point_cloud_semantic_labels(self, semantic_map: datatypes.SemanticMap2D,
-                                            depth_map: datatypes.DepthMap) -> None:
-        """ Updates the temporary point cloud and semantic labels list using a new semantic map and depth map.
+    def _update_point_cloud_semantic_labels(
+        self, semantic_map: datatypes.SemanticMap2D, depth_map: datatypes.DepthMap
+    ) -> None:
+        """Updates the temporary point cloud and semantic labels list using a new semantic map and depth map.
 
         Args:
             semantic_map (datatypes.SemanticMap2D): the new semantic map.
@@ -312,7 +325,7 @@ class SemanticMap3DBuilder:
 
     def _calculate_map_shape(self, semantic_map_bounds: Tuple[datatypes.Coordinate3D, datatypes.Coordinate3D]):
         min_point, max_point = semantic_map_bounds
-        map_size = np.round((np.array(max_point) - np.array(min_point)) / self._resolution).astype(int) + 1
+        map_size = np.ceil((np.array(max_point) - np.array(min_point)) / self._resolution).astype(int)
 
         return (*map_size, self._num_semantic_classes + 1)  # type: ignore[return-value]
 
