@@ -1,18 +1,17 @@
 import numpy as np
-import open3d as o3d
 from yacs.config import CfgNode
 
+from .datatypes import IntrinsicMatrix
 
-def get_camera_intrinsic_from_cfg(sensor_cfg: CfgNode) -> o3d.camera.PinholeCameraIntrinsic:
+
+def get_camera_intrinsic_from_cfg(sensor_cfg: CfgNode) -> IntrinsicMatrix:
+    intrinsics = np.eye(3, 3)
     focal_length = calculate_focal_length_from_cfg(sensor_cfg)
-    return o3d.camera.PinholeCameraIntrinsic(
-        width=sensor_cfg.WIDTH,
-        height=sensor_cfg.HEIGHT,
-        cx=sensor_cfg.WIDTH / 2,
-        cy=sensor_cfg.HEIGHT / 2,
-        fx=focal_length,
-        fy=focal_length,
-    )
+    intrinsics[0, 0] = focal_length
+    intrinsics[1, 1] = focal_length
+    intrinsics[0, 2] = sensor_cfg.WIDTH / 2
+    intrinsics[1, 2] = sensor_cfg.HEIGHT / 2
+    return intrinsics
 
 
 def calculate_focal_length_from_cfg(sensor_cfg: CfgNode) -> float:

@@ -31,5 +31,8 @@ TranslationVector = NDArray[Shape["3"], Float]
 RotationQuaternion = NDArray[Shape["1"], np.quaternion]  # type: ignore[name-defined]
 Pose = Tuple[TranslationVector, RotationQuaternion]
 HomogenousTransform = NDArray[Shape["4, 4"], Float]
+IntrinsicMatrix = NDArray[Shape["3, 3"], Float]
+ExtrinsicMatrix = NDArray[Shape["4, 4"], Float]
+
 
 AgentAction = str

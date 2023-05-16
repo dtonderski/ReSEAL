@@ -9,12 +9,15 @@ We use the `devcontainer` feature is `vscode` for the development environment.
 For more information about devloping inside a container, we refer to [[link]](https://code.visualstudio.com/docs/devcontainers/containers#_create-a-devcontainerjson-file).
 The only requirement is installing the `ms-vscode-remote.remote-containers` extension in `vscode`.
 
-The development container is built on the [[AI Habitat Challenge 2023]](https://aihabitat.org/challenge/2023/) Docker image [[Docker Hub]](https://aihabitat.org/challenge/2023/).
+~~The development container is built on the [[AI Habitat Challenge 2023]](https://aihabitat.org/challenge/2023/) Docker image [[Docker Hub]](https://aihabitat.org/challenge/2023/)~~
+
+We define our own Docker image in `docker/Dockerfile.cuda`, which is built on Nvidia's [CudaGL containers](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cudagl).
+
+To build the image, run the following `tools/build_images.sh` script.
 To download the image, run the following command in the terminal:
 ```bash
-docker pull fairembodied/habitat-challenge:habitat_navigation_2023_base_docker
+docker pull dominic4810/reseal:cuda-v1.0
 ```
-For more information about working with this image, we refer to this [[guide]](https://github.com/facebookresearch/habitat-lab#docker-setup).
 
 Run the following command in `vscode` to build the container and start developing in the `devcontainer`:
 ```
@@ -48,6 +51,36 @@ Run the following command to generate, 3D semantic maps and top down view of the
 ```
 python src/scripts/generate_semantic_map_3d.py --scene-name train/00000-kfPV7w3FaU5 --num-steps 50
 ```
+
+# Running on Euler Cluster
+To run the scripts on ETHZ's Euler cluster, we use conda environments.
+
+First, you have to define the modules:
+```
+module load gcc/8.2.0 python_gpu/3.8.5 eth_proxy
+```
+
+Before installing the conda environment, we have to comment line `15` in `requirements.txt`. This is because `open3d` is [not support on CentOs 7.x](https://github.com/isl-org/Open3D/issues/4706)
+
+We provide scripts for setting up the conda environment:
+
+```bash
+bash tools/install_conda.sh
+exec bash
+bash tools/setup_venv.sh
+```
+
+In some cases, you might have to also reinstall torch to get the correct drivers. We recommend running:
+```bash
+pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
+```
+
+If all goes well, you can try running some scripts to generate trajectories and 3D semantic maps
+```bash
+conda activate habitat
+python src/scripts/generate_trajectories.py --use-random-policy
+```
+
 # Repository strucutre
 The repository is structure according to the template in [[link]](https://towardsdatascience.com/structuring-machine-learning-projects-be473775a1b6) and inspired by [[Cookiecutter Data Science]](https://drivendata.github.io/cookiecutter-data-science/)
 
