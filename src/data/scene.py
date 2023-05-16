@@ -78,7 +78,6 @@ def make_habitat_sim_cfg(
 
     scene_path, scene_dataset_config_path, use_semantic_sensor = get_scene_info(scene_split, scene_id, data_paths_cfg)
 
-
     habitat_sim_cfg = habitat_sim.SimulatorConfiguration()
     habitat_sim_cfg.gpu_device_id = 0
     habitat_sim_cfg.scene_id = str(scene_path)
