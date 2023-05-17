@@ -1,4 +1,4 @@
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
 import numpy as np
 import quaternion  # pylint: disable=unused-import
@@ -9,6 +9,7 @@ from yacs.config import CfgNode
 from ..utils import datatypes
 from ..utils.camera_intrinsic import get_camera_intrinsic_from_cfg
 from ..utils.geometric_transformations import HomogenousTransformFactory, coordinates_to_grid_indices
+
 
 class SemanticMap3DBuilder:
     """Builds a 3D semantic map from a sequence of depth maps and semantic maps. New information is added using the
@@ -65,7 +66,6 @@ class SemanticMap3DBuilder:
 
         return self._calculate_map_shape(self._semantic_map_bounds)
 
-    # type: ignore[name-defined]
     @property
     def semantic_map(self) -> datatypes.SemanticMap3D:
         if self._semantic_map is None:
@@ -108,18 +108,6 @@ class SemanticMap3DBuilder:
             raise RuntimeError("Invalid pose (%s, %s, %s)", min_index, max_index, self._semantic_map.shape)
         return map_at_pose
 
-    @property
-    def semantic_map_3d_map_shape(self) -> Tuple[int, int, int, int]:
-        """Tuple[int, int, int, int]: Shape of the semantic map 3D voxel grid,
-        calculated from `MAP_SIZE` and `RESOLUTION`"""
-
-        if self._get_entire_map:
-            min_point, max_point = self.get_semantic_map_bounds(None)
-            map_size = np.round((np.array(max_point) - np.array(min_point)) / self._resolution).astype(int) + 2
-        else:
-            map_size = np.round(self._map_size / self._resolution).astype(int) + 1
-        return (*map_size, self._num_semantic_classes + 1)  # type: ignore[return-value]
-
     def clear(self) -> None:
         """Resets the map builder, clearing the point clouds, the semantic map, and the semantic labels"""
         self._master_point_cloud = np.zeros((0, 3))
@@ -131,12 +119,6 @@ class SemanticMap3DBuilder:
         self._semantic_map = None
         self._semantic_map_bounds = None
 
-    def update_kdtree(self) -> None:
-        """Updates the KDTree of the point cloud.
-        Call this before creating semantic map if multiple maps need to be created, as creating the KDTree is expensive
-        """
-        self._kdtree = o3d.geometry.KDTreeFlann(self._point_cloud)
-
     def update_point_cloud(
         self,
         semantic_map: datatypes.SemanticMap2D,
@@ -146,16 +128,10 @@ class SemanticMap3DBuilder:
         """Updates the point cloud from a depth map, semantic map and pose of agent. Adds the points to the temporary
         point cloud, and the semantic labels to the temporary semantic labels list.
 
-        NOTE: This does not update the KDTree
-
         Args:
             semantic_map (datatypes.SemanticMap2D): Semantic map
             depth_map (datatypes.DepthMap): Depth map
             pose (datatypes.Pose): Pose of agent, i.e. (position, orientation)
-            fast (bool, optional): If used, the semantic numpy array is not updated in this iteration, but instead \
-                stored in a list. This is faster, but requires a call to 'concatenate_semantics' before the semantic \
-                information is used. Only use if you do not plan to use the semantic information in this iteration. \
-                Defaults to False.
         """
         point_cloud = self._calculate_point_cloud(depth_map, pose)
         self._temporary_point_cloud = np.concatenate([self._temporary_point_cloud, point_cloud])

@@ -4,56 +4,42 @@ import os
 import torch
 from PIL import Image
 import numpy as np
-
+from src.model.perception.labeler import LabelGenerator
+import cv2
 class MaskRCNNDataset(Dataset):
 
-    def __init__(self, root, transforms=None):
+    def __init__(self, root, transforms=None, label_generator=None):
         self.root = root
         self.transforms = transforms
         self.imgs = list(sorted(os.listdir(os.path.join(root, "RGB"))))
-        self.masks = list(sorted(os.listdir(os.path.join(root, "MASKS"))))
+        POSITIONS_FILE = f"{root}/positions.npy"
+        ROTATIONS_FILE = f"{root}/rotations.npy"
+
+        self.rotations = np.load(ROTATIONS_FILE).view(dtype=np.quaternion)
+        self.positions = np.load(POSITIONS_FILE)   
+        #self.masks = list(sorted(os.listdir(os.path.join(root, "MASKS"))))
+        self.label_generator = label_generator
 
     
 
     def __getitem__(self, idx):
         img_path = os.path.join(self.root, "RGB", self.imgs[idx])
-        # Label_Generator
-        mask_path = os.path.join(self.root, "MASKS", self.masks[idx])
-        img = Image.open(img_path).convert("RGB")
-        mask = np.load(mask_path)
-        #mask = np.array(mask)
-        obj_ids = np.unique(mask)
-        obj_ids = obj_ids[1:]
+        #img = Image.open(img_path).convert("RGB")
 
-        masks = mask == obj_ids[:, None, None]
-        num_objs = len(obj_ids)
-        boxes =  []
-        for i in range(num_objs):
-            pos = np.where(masks[i])
-            xmin = np.min(pos[1])
-            xmax = np.max(pos[1])
-            ymin = np.min(pos[0])
-            ymax = np.max(pos[0])
-            boxes.append([xmin, xmax, ymin, ymax])
-        boxes = torch.as_tensor(boxes, dtype=torch.float32)
-        labels = torch.ones((num_objs,), dtype=torch.int64)
-        masks = torch.as_tensor(masks, dtype=torch.uint8)
+        rgb_image = cv2.imread(img_path)
+        rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
+        img = rgb_image / 255
+        #img = self.transforms(img)
+        pose = (self.positions[idx], self.rotations[idx])
+        #instance_map_2d = self.label_generator.get_instance_map_2d(pose)
         
+        if self.label_generator is None:
+            print("No LabelGenerator defined for the MaskRCNN Dataset")
+
+        label_dict = self.label_generator.get_label_dict(pose)
+        print(label_dict['boxes'].shape)
         image_id = torch.tensor([idx])
-        area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
-        iscrowd = torch.zeros((num_objs,), dtype=torch.int64)
-
-        target = {}
-        target["boxes"] = boxes
-        target["labels"] = labels
-        target["masks"] = masks
-        target["image_id"] = image_id
-        target["area"] = area
-        target["iscrowd"] = iscrowd
-
-        if self.transforms is not None :
-            img, target = self.transforms(img, target)
-        return img, target #self.transform(image)
+        return img, label_dict #self.transform(image)
 
     def __len__(self):
         return len(self.imgs)
