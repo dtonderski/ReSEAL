@@ -191,13 +191,13 @@ class ModelWrapper():
                 label_dict[key] = value.to(self._device)
 
     def _preprocess_image(self, image: Union[Float[torch.Tensor, "B H W C"], Float[np.ndarray, "H W C"]]
-                          ) -> Float[torch.Tensor, "B H W C"]:
+                          ) -> Float[torch.Tensor, "B C H W"]:
         if isinstance(image, np.ndarray):
             if len(image.shape) != 3 or image.shape[2] != 3:
                 raise ValueError(f"Unknown image shape: {image.shape} for numpy array! Must be H,W,C.")
             image = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0)
         elif isinstance(image, torch.Tensor):
-            if len(image.shape) != 4 or image.shape[-1] != 3:
+            if len(image.shape) != 4 or image.shape[1] != 3:
                 raise ValueError(f"Unknown image shape: {image.shape} for torch tensor! Must be B,C,H,W.")
         else:
             raise ValueError(f"Unknown image type: {type(image)}")

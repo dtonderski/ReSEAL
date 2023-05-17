@@ -24,11 +24,15 @@ class MaskRCNNDataset(Dataset):
 
     def __getitem__(self, idx):
         img_path = os.path.join(self.root, "RGB", self.imgs[idx])
-        #img = Image.open(img_path).convert("RGB")
+        img = Image.open(img_path).convert("RGB")
+        img = self.transforms(img)
+        img = img.permute(1,2,0)
+        print("shape after permute")
+        print(img.shape)
 
-        rgb_image = cv2.imread(img_path)
-        rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
-        img = rgb_image / 255
+        #rgb_image = cv2.imread(img_path)
+        #rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
+        #img = rgb_image / 255
         #img = self.transforms(img)
         pose = (self.positions[idx], self.rotations[idx])
         #instance_map_2d = self.label_generator.get_instance_map_2d(pose)
