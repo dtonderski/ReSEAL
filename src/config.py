@@ -82,5 +82,6 @@ def default_action_module_cfg() -> CfgNode:
 def default_env_cfg() -> CfgNode:
     env_cfg = CfgNode()
     env_cfg.GLOBAL_POLICY_POLLING_FREQUENCY = 10
-    env_cfg.GAINFUL_CURIOSITY_THRESHOLD = 0.9
+    env_cfg.GAINFUL_CURIOUSITY_THRESHOLD = 0.9
+    env_cfg.MAX_STEPS = 100
     return env_cfg

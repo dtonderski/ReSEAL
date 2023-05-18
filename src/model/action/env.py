@@ -25,24 +25,30 @@ class HabitatEnv(gym.Env):
         self._local_policy = local_policy
         self._model = model
         self._cfg = cfg
-        self.observation_space = gym.spaces.Box(0, 1, shape=self._map_builder.semantic_map_at_pose_size)
-        self.action_space = gym.spaces.Box(-np.inf, np.inf, shape=(3,))
+        map_shape = self._map_builder.semantic_map_at_pose_size
+        self.observation_space = gym.spaces.Box(0, 1, shape=(map_shape[3], map_shape[0], map_shape[1], map_shape[2]))
+        self.action_space = gym.spaces.Box(-1000, 1000, shape=(3,)) # TODO: The bounds are arbitrary large numbers. Technically this could be determined from the scene.
+        self._counter = 0
 
     def step(self, action):
         for _ in range(self._cfg.GLOBAL_POLICY_POLLING_FREQUENCY):
             agent_action = self._local_policy(action)
-            _ = self._sim.step(agent_action)
+            if agent_action:
+                _ = self._sim.step(agent_action)
             self._update_obs()
+        self._counter += 1
         obs = self._get_obs()
         reward = self._gainful_curiosity()
-        done = False
-        info = {}
-        return obs, reward, done, info
+        done = self._counter >= self._cfg.MAX_STEPS
+        info = {}  # TODO: Do we need to add info to the env?
+        return obs, reward, done, False, info
 
     def reset(self, seed=None, options=None):
         self._sim.reset()
         self._map_builder.clear()
-        obs = self._get_obs(True)
+        self._counter = 0
+        self._update_obs()
+        obs = self._get_obs()
         info = {}
         return obs, info
 
@@ -59,7 +65,7 @@ class HabitatEnv(gym.Env):
         depth_map = observations["depth_sensor"]  # pylint: disable=unsubscriptable-object
         position = self._sim.get_agent(0).state.position
         rotation = self._sim.get_agent(0).state.rotation
-        semantic_map = self._model(rgb)
+        semantic_map = self._model(rgb[:,:,:3])
         pose = (position, rotation)
         self._map_builder.update_point_cloud(semantic_map, depth_map, pose)
 
@@ -68,7 +74,9 @@ class HabitatEnv(gym.Env):
         position = self._sim.get_agent(0).state.position
         rotation = self._sim.get_agent(0).state.rotation
         pose = (position, rotation)
-        return self._map_builder.semantic_map_at_pose(pose)
+        semantic_map = self._map_builder.semantic_map_at_pose(pose)
+        semantic_map = np.transpose(semantic_map, (3, 0, 1, 2))
+        return semantic_map
 
     def _gainful_curiosity(self):
         semantic_map = self._map_builder.semantic_map
