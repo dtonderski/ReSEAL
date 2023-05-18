@@ -77,8 +77,12 @@ class LabelGenerator:
         masks = one_hot[..., present_instance_indices_mask].transpose(2,0,1)
         # TODO: Sanity check, remove when sane
         assert boxes.shape[0] == labels.shape[0] == masks.shape[0]
+        if boxes.size == 0:
+            boxes = np.zeros((0, 4))
+            labels = np.zeros((0,))
+            masks = np.zeros((0, self._sensor_cfg.HEIGHT, self._sensor_cfg.WIDTH))
         return {"boxes": torch.tensor(boxes).float(),
-                "labels": torch.tensor(labels),
+                "labels": torch.tensor(labels).type(torch.int64),
                 "masks": torch.tensor(masks).type(torch.uint8)}
 
     def _object_slice_to_bounding_box(self, object_slice):
