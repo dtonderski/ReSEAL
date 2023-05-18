@@ -8,6 +8,14 @@ from src.model.perception.labeler import LabelGenerator
 import cv2
 class MaskRCNNDataset(Dataset):
 
+    @property
+    def label_generator(self):
+        return self._label_generator
+    
+    @label_generator.setter
+    def label_generator(self, label_generator):
+        self._label_generator = label_generator
+
     def __init__(self, root, transforms=None, label_generator=None):
         self.root = root
         self.transforms = transforms
@@ -18,30 +26,22 @@ class MaskRCNNDataset(Dataset):
         self.rotations = np.load(ROTATIONS_FILE).view(dtype=np.quaternion)
         self.positions = np.load(POSITIONS_FILE)   
         #self.masks = list(sorted(os.listdir(os.path.join(root, "MASKS"))))
-        self.label_generator = label_generator
-
-    
+        self._label_generator = label_generator    
 
     def __getitem__(self, idx):
         img_path = os.path.join(self.root, "RGB", self.imgs[idx])
         img = Image.open(img_path).convert("RGB")
         img = self.transforms(img)
-        #img = img.permute(1,2,0)
-        #rgb_image = cv2.imread(img_path)
-        #rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
-        #img = rgb_image / 255
-        #img = self.transforms(img)
         pose = (self.positions[idx], self.rotations[idx])
-        #instance_map_2d = self.label_generator.get_instance_map_2d(pose)
         
-        if self.label_generator is None:
+        if self._label_generator is None:
             print("No LabelGenerator defined for the MaskRCNN Dataset")
 
-        label_dict = self.label_generator.get_label_dict(pose)
+        label_dict = self._label_generator.get_label_dict(pose)
         return img, label_dict #self.transform(image)
 
     def __len__(self):
         return len(self.imgs)
 
-    def set_label_generator(label_generator):
-        self.label_generator = label_generator
+def collate_fn(batch):
+    return tuple(zip(*batch))
