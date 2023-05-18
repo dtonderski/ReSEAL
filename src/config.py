@@ -78,7 +78,7 @@ def default_action_module_cfg() -> CfgNode:
     action_module_cfg.ACTION_PIPELINE.GLOBAL_POLICY_POLLING_FREQUENCY = 10
     return action_module_cfg
     
-def default_maskrcnn_cfg() -> CfgNode:
+def train_maskrcnn_cfg() -> CfgNode:
     mask_cfg = CfgNode()
     mask_cfg.NUM_EPOCHS = 30
     mask_cfg.NUM_CLASSES = 6
@@ -91,3 +91,15 @@ def default_maskrcnn_cfg() -> CfgNode:
     mask_cfg.OPTIM_STEP_SIZE = 3
     mask_cfg.OPTIM_GAMMA = 0.1    
     return mask_cfg
+
+def perception_trainer_cfg() -> CfgNode:
+    per_trainer_cfg = CfgNode()
+    per_trainer_cfg.MAX_TRAJECTORY_LENGTH = 200
+    per_trainer_cfg.USE_RANDOM_POLICY = True
+
+def train_map_builder_cfg() -> CfgNode:
+    map_builder_cfg = CfgNode()
+    map_builder_cfg.RESOLUTION = 0.05  # m per pixel
+    map_builder_cfg.MAP_SIZE = (25, 1.5, 25)  # (x, y, z) in m
+    map_builder_cfg.NUM_SEMANTIC_CLASSES = 6
+    return map_builder_cfg

@@ -19,7 +19,7 @@ class GenerateTrajectoryFilepaths:
 
     @property
     def trajectory_output_dir(self) -> Path:
-        return Path(self.data_paths_cfg.TRAJECTORIES_DIR) / self.scene_name
+        return Path(self.data_paths_cfg.TRAJECTORIES_DIR) / self.scene_id
 
     @property
     def rgb_dir(self) -> Path:

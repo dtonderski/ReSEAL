@@ -24,19 +24,21 @@ class MaskRCNNDataset(Dataset):
         self.root = root
         self.transforms = transforms
         self.imgs = list(sorted(os.listdir(os.path.join(root, "RGB"))))
-        POSITIONS_FILE = f"{root}/positions.npy"
-        ROTATIONS_FILE = f"{root}/rotations.npy"
+        
 
-        self.rotations = np.load(ROTATIONS_FILE).view(dtype=np.quaternion) #type: ignore
-        self.positions = np.load(POSITIONS_FILE)   
+        #POSITIONS_FILE = f"{root}/positions.npy"
+        #ROTATIONS_FILE = f"{root}/rotations.npy"
+
+        #self.rotations = np.load(ROTATIONS_FILE).view(dtype=np.quaternion) #type: ignore
+        #self.positions = np.load(POSITIONS_FILE)   
         #self.masks = list(sorted(os.listdir(os.path.join(root, "MASKS"))))
-        self._label_generator = label_generator    
+        self._label_generator = label_generator
 
     def __getitem__(self, idx):
         img_path = os.path.join(self.root, "RGB", self.imgs[idx])
         img = Image.open(img_path).convert("RGB")
         img = self.transforms(img)
-        pose = (self.positions[idx], self.rotations[idx])
+        #pose = (self.positions[idx], self.rotations[idx])
         
         if self._label_generator is None:
             print("No LabelGenerator defined for the MaskRCNN Dataset")

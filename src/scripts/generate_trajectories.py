@@ -20,9 +20,12 @@ def main(
     goal_position: Optional[datatypes.Coordinate3D] = None,
     use_random_policy: bool = False,
     commands_file: Optional[str] = None,
+    epoch_number: Optional[int] = None
 ):
     start_position = np.array(start_position)  # type: ignore[assignment]
     data_paths_cfg = config.default_data_paths_cfg()
+    if epoch_number is not None:
+        data_paths_cfg.TRAJECTORIES_DIR = data_paths_cfg.TRAJECTORIES_DIR + "/epoch_"+str(epoch_number) 
     data_paths = filepath.GenerateTrajectoryFilepaths(data_paths_cfg, scene_name)
     # Create directories
     data_paths.rgb_dir.mkdir(parents=True, exist_ok=True)
