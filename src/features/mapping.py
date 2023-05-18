@@ -80,7 +80,7 @@ class SemanticMap3DBuilder:
         return self._semantic_map.shape
 
     @property
-    def semantic_map_at_pose_size(self) -> Tuple[int, int, int, int]:
+    def semantic_map_at_pose_shape(self) -> Tuple[int, int, int, int]:
         """Size of semantic map when calling semantic_map_at_pose in voxels"""
         map_shape = coordinates_to_grid_indices(np.array(self._map_size), (0, 0, 0), self._resolution)
         return (map_shape[0], map_shape[1], map_shape[2], self._num_semantic_classes + 1)

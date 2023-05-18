@@ -1,25 +1,26 @@
-from gymnasium import spaces
-import numpy as np
-from yacs.config import CfgNode
+from typing import Tuple
+
+import gymnasium as gym
 
 
-def create_observation_space(global_policy_cfg: CfgNode) -> spaces.Space:
+def create_observation_space(map_shape: Tuple[int, int, int, int]) -> gym.spaces.Space:
     """Factory function for creating observation space of the global policy. I.e. 3D semantic map
-    
+
     Args:
-        global_policy_cfg (CfgNode): global policy config
+        map_shape (Tuple[int, int, int, int]): Shape of the semantic map (height, width, depth, channels)
 
     Returns:
         spaces.Space: observation space
     """
-    shape = global_policy_cfg.OBSERVATION_SPACE_SHAPE
-    return spaces.Box(low=0, high=1, shape=shape)
+    return gym.spaces.Box(0, 1, shape=(map_shape[3], map_shape[0], map_shape[1], map_shape[2]))
 
 
-def create_action_space() -> spaces.Space:
+def create_action_space() -> gym.spaces.Space:
     """Factory function for creating action space of the global policy. I.e. goal coordinates
 
     Returns:
         spaces.Space: action space
     """
-    return spaces.Box(low=-np.inf, high=np.inf, shape=(3,))
+    return gym.spaces.Box(
+        -1000, 1000, shape=(3,)
+    )  # TODO: The bounds are arbitrary large numbers. Technically this could be determined from the scene.

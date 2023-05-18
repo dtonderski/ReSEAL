@@ -5,17 +5,17 @@ import habitat_sim
 import numpy as np
 from yacs.config import CfgNode
 
-from ...data.scene import initialize_sim
 from ...features.mapping import SemanticMap3DBuilder
 from ...utils import datatypes
 from ..perception.model_wrapper import ModelWrapper
 from .local_policy import LocalPolicy
+from .spaces import create_action_space, create_observation_space
 
 
 class HabitatEnv(gym.Env):
     """This class wraps the habitat-sim simulator, perception pipeline and map builder,
     and provides an OpenAI Gym interface.
-    
+
     Args:
         sim (habitat_sim.Simulator): The habitat-sim simulator
         local_policy (LocalPolicy): The local policy (e.g. GreedyLocalPolicy)
@@ -23,6 +23,7 @@ class HabitatEnv(gym.Env):
         model (ModelWrapper): The perception model
         cfg (CfgNode): Environment configuration
     """
+
     def __init__(
         self,
         sim: habitat_sim.Simulator,
@@ -37,9 +38,8 @@ class HabitatEnv(gym.Env):
         self._local_policy = local_policy
         self._model = model
         self._cfg = cfg
-        map_shape = self._map_builder.semantic_map_at_pose_size
-        self.observation_space = gym.spaces.Box(0, 1, shape=(map_shape[3], map_shape[0], map_shape[1], map_shape[2]))
-        self.action_space = gym.spaces.Box(-1000, 1000, shape=(3,)) # TODO: The bounds are arbitrary large numbers. Technically this could be determined from the scene.
+        self.observation_space = create_observation_space(self._map_builder.semantic_map_at_pose_shape)
+        self.action_space = create_action_space()
         self._counter = 0
 
     def step(self, action) -> Tuple[datatypes.SemanticMap3D, float, bool, bool, dict]:
@@ -73,7 +73,7 @@ class HabitatEnv(gym.Env):
     def reset(self, _seed=None, _options=None):
         """Reset the environment. This resets the simulator, map builder, and counter.
         # TODO: Initialize the agent at a random pose
-        
+
         Returns:
             datatypes.SemanticMap3D: The semantic map at the agent's initial pose
             dict: Additional info
@@ -101,7 +101,7 @@ class HabitatEnv(gym.Env):
         depth_map = observations["depth_sensor"]  # pylint: disable=unsubscriptable-object
         position = self._sim.get_agent(0).state.position
         rotation = self._sim.get_agent(0).state.rotation
-        semantic_map = self._model(rgb[:,:,:3])
+        semantic_map = self._model(rgb[:, :, :3])
         pose = (position, rotation)
         self._map_builder.update_point_cloud(semantic_map, depth_map, pose)  # type: ignore[arg-type]
 
