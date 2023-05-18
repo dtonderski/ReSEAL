@@ -47,6 +47,10 @@ class ModelWrapper():
             MaskRCNN_ResNet50_FPN_Weights, loads weights from torchvision. Defaults to \
             MaskRCNN_ResNet50_FPN_Weights.COCO_V1.
         mode (str, optional): starting mode of the model. Defaults to 'eval'.
+        device (str, optional): device on which the model should be, one of 'cuda' and 'cpu'. Defaults to 'cpu'.
+        **kwargs: parameters passed to the torchvision.models.detection.maskrcnn_resnet50_fpn base class, see \
+            https://pytorch.org/vision/main/models/generated/torchvision.models.detection.maskrcnn_resnet50_fpn.html.
+
     """
     @property
     def maskrcnn(self) -> nn.Module:
@@ -64,23 +68,26 @@ class ModelWrapper():
                  weights: Optional[Union[PurePath, str, MaskRCNN_ResNet50_FPN_Weights]] \
                      = MaskRCNN_ResNet50_FPN_Weights.COCO_V1,
                  mode='eval',
-                 device = 'cpu'):
+                 device = 'cpu',
+                 **kwargs):
         super().__init__()
         self._model_config = model_config
-        self._load_model(weights)
+        self._load_model(weights, **kwargs)
         self._update_mode(mode)
         self._update_device(device)
         self._load_initial_transforms()
         self._load_dictionaries()
 
-    def _load_model(self, weights: Optional[Union[PurePath, str, MaskRCNN_ResNet50_FPN_Weights]]):
+    def _load_model(self, weights: Optional[Union[PurePath, str, MaskRCNN_ResNet50_FPN_Weights]], **kwargs):
+        """ See documentation of weights argument in class.
+        """
         if isinstance(weights, (PurePath, str)):
-            self._maskrcnn = maskrcnn_resnet50_fpn()
+            self._maskrcnn = maskrcnn_resnet50_fpn(**kwargs)
             self._maskrcnn.load_state_dict(torch.load(weights))
         elif isinstance(weights, MaskRCNN_ResNet50_FPN_Weights):
-            self._maskrcnn = maskrcnn_resnet50_fpn(weights = weights)
+            self._maskrcnn = maskrcnn_resnet50_fpn(weights = weights, **kwargs)
         elif weights is None:
-            self._maskrcnn = maskrcnn_resnet50_fpn()
+            self._maskrcnn = maskrcnn_resnet50_fpn(**kwargs)
         else:
             raise ValueError(f"Unknown weights type: {type(weights)}")
 
