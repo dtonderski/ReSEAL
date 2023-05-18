@@ -190,7 +190,7 @@ class ModelWrapper():
             for key, value in label_dict.items():
                 label_dict[key] = value.to(self._device)
 
-    def _preprocess_image(self, image: Union[Float[torch.Tensor, "B H W C"], Float[np.ndarray, "H W C"]]
+    def _preprocess_image(self, image: Union[Float[torch.Tensor, "B C H W"], Float[np.ndarray, "H W C"]]
                           ) -> Float[torch.Tensor, "B C H W"]:
         if isinstance(image, np.ndarray):
             if len(image.shape) != 3 or image.shape[2] != 3:

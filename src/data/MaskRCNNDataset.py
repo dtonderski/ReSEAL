@@ -26,10 +26,7 @@ class MaskRCNNDataset(Dataset):
         img_path = os.path.join(self.root, "RGB", self.imgs[idx])
         img = Image.open(img_path).convert("RGB")
         img = self.transforms(img)
-        img = img.permute(1,2,0)
-        print("shape after permute")
-        print(img.shape)
-
+        #img = img.permute(1,2,0)
         #rgb_image = cv2.imread(img_path)
         #rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
         #img = rgb_image / 255
@@ -41,8 +38,6 @@ class MaskRCNNDataset(Dataset):
             print("No LabelGenerator defined for the MaskRCNN Dataset")
 
         label_dict = self.label_generator.get_label_dict(pose)
-        print(label_dict['boxes'].shape)
-        image_id = torch.tensor([idx])
         return img, label_dict #self.transform(image)
 
     def __len__(self):
