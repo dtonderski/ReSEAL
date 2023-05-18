@@ -27,7 +27,7 @@ class SemanticMap3DBuilder:
     def __init__(self, map_builder_cfg: CfgNode, sim_cfg: CfgNode) -> None:
         self._resolution = map_builder_cfg.RESOLUTION  # m per voxel
         self._num_semantic_classes = map_builder_cfg.NUM_SEMANTIC_CLASSES
-        self._map_size = np.array(map_builder_cfg.MAP_SIZE) / 2
+        self._map_size = np.array(map_builder_cfg.MAP_SIZE)
         self._intrinsic = get_camera_intrinsic_from_cfg(sim_cfg.SENSOR_CFG)
 
         # Master stores all points added to the map builder
@@ -72,6 +72,19 @@ class SemanticMap3DBuilder:
             raise ValueError("Trying to access semantic map before it is calculated!")
         return self._semantic_map
 
+    @property
+    def semantic_map_size(self) -> Tuple[int, int, int, int]:
+        """Size of semantic map in voxels"""
+        if self._semantic_map is None:
+            raise RuntimeError("Trying to access semantic map before it is calculated!")
+        return self._semantic_map.shape
+
+    @property
+    def semantic_map_at_pose_size(self) -> Tuple[int, int, int, int]:
+        """Size of semantic map when calling semantic_map_at_pose in voxels"""
+        map_shape = coordinates_to_grid_indices(np.array(self._map_size), (0, 0, 0), self._resolution)
+        return (map_shape[0], map_shape[1], map_shape[2], self._num_semantic_classes + 1)
+
     def semantic_map_at_pose(self, pose: datatypes.Pose) -> datatypes.SemanticMap3D:
         """Calculates the voxel semantic map at a given pose.
         The size of the map is according to the MAP_SIZE configuration (given in m)
@@ -79,8 +92,8 @@ class SemanticMap3DBuilder:
         if self._semantic_map is None:
             raise ValueError("Trying to access semantic map before it is calculated!")
         position = np.array(pose[0])
-        map_bound_min = position - self._map_size
-        map_bound_max = position + self._map_size
+        map_bound_min = position - self._map_size / 2
+        map_bound_max = position + self._map_size / 2
         grid_index_of_origin = self.get_grid_index_of_origin()
         min_index = coordinates_to_grid_indices(map_bound_min.T, grid_index_of_origin, self._resolution)
         max_index = coordinates_to_grid_indices(map_bound_max.T, grid_index_of_origin, self._resolution)
