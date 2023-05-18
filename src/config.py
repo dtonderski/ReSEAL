@@ -80,7 +80,7 @@ def default_action_module_cfg() -> CfgNode:
     
 def default_maskrcnn_cfg() -> CfgNode:
     mask_cfg = CfgNode()
-    mask_cfg.NUM_EPOCHS = 10
+    mask_cfg.NUM_EPOCHS = 30
     mask_cfg.NUM_CLASSES = 6
     mask_cfg.BATCH_SIZE = 1
     mask_cfg.SHUFFLE = False

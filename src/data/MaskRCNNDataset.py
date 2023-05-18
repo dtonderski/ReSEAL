@@ -42,3 +42,6 @@ class MaskRCNNDataset(Dataset):
 
     def __len__(self):
         return len(self.imgs)
+
+    def set_label_generator(label_generator):
+        self.label_generator = label_generator
