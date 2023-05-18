@@ -36,6 +36,7 @@ class SemanticMap3DBuilder:
 
         # Temporary stores only the points that have not been added to the semantic map
         self._temporary_point_cloud = np.zeros((0, 3))
+        self._temporary_point_cloud_list: List = []
         # This is a list, as adding to lists is way faster than concatenating numpy arrays, so
         # concatenation is only done when needed (i.e. when the semantic map is updated).
         self._temporary_point_cloud_semantic_labels_list: List = []
@@ -112,6 +113,7 @@ class SemanticMap3DBuilder:
         """Resets the map builder, clearing the point clouds, the semantic map, and the semantic labels"""
         self._master_point_cloud = np.zeros((0, 3))
         self._temporary_point_cloud = np.zeros((0, 3))
+        self._temporary_point_cloud_list.clear()
 
         self._master_point_cloud_semantic_labels = np.zeros((0, self._num_semantic_classes))
         self._temporary_point_cloud_semantic_labels_list.clear()
@@ -134,7 +136,7 @@ class SemanticMap3DBuilder:
             pose (datatypes.Pose): Pose of agent, i.e. (position, orientation)
         """
         point_cloud = self._calculate_point_cloud(depth_map, pose)
-        self._temporary_point_cloud = np.concatenate([self._temporary_point_cloud, point_cloud])
+        self._temporary_point_cloud_list.append(point_cloud)
         self._update_point_cloud_semantic_labels(semantic_map, depth_map)
 
     def update_semantic_map(self):
@@ -149,6 +151,9 @@ class SemanticMap3DBuilder:
             for (i, j, k), label in zip(grid_indices, semantic_labels):
                 semantic_map[i, j, k, 1:] = np.maximum(semantic_map[i, j, k, 1:], label)
             return semantic_map
+
+        if len(self._temporary_point_cloud_list) != 0:
+            self._temporary_point_cloud = np.concatenate(self._temporary_point_cloud_list)
 
         if self._semantic_map is None:
             self._initialize_semantic_map()
@@ -211,6 +216,7 @@ class SemanticMap3DBuilder:
         """
         self._master_point_cloud = np.concatenate([self._master_point_cloud, self._temporary_point_cloud])
         self._temporary_point_cloud = np.zeros((0, 3))
+        self._temporary_point_cloud_list.clear()
 
         if self._master_point_cloud_semantic_labels is None:
             self._master_point_cloud_semantic_labels = temporary_point_cloud_semantic_labels
