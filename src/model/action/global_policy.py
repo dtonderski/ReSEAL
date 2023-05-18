@@ -12,6 +12,9 @@ from .spaces import create_action_space, create_observation_space
 
 
 class RandomGlobalPolicy(ActorCriticPolicy):
+    """Global policy that generates random goal coordinates based on given navmash
+    Follows the same interface as ActorCriticPolicy of stable-baselines3
+    """
     def __init__(
         self,
         observation_space: spaces.Space,
@@ -32,6 +35,11 @@ class RandomGlobalPolicy(ActorCriticPolicy):
         self._path_finder.load_nav_mesh(navmesh_filepath)
 
     def forward(self, _obs: Tensor, _deterministic: bool = False) -> Tuple[Tensor, Tensor, Tensor]:
+        """Generates random goal coordinates
+
+        Returns:
+            Tuple[Tensor, Tensor, Tensor]: goal coordinates, None, None
+        """
         goal_position = self._path_finder.get_random_navigable_point()
         return Tensor(goal_position), None, None  # type: ignore[return-value]
 
@@ -49,6 +57,9 @@ class RandomGlobalPolicy(ActorCriticPolicy):
 
 
 def create_global_policy(global_policy_cfg: CfgNode, **kwargs) -> ActorCriticPolicy:
+    """Factory function for creating global policy.
+    TODO: add ActorCriticCnnPolicy, with feature extractor loading
+    """
     observation_space = create_observation_space(global_policy_cfg)
     action_space = create_action_space()
     lr_schedule = _create_lr_schedule(global_policy_cfg.LR_SCHEDULE)

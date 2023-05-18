@@ -18,6 +18,13 @@ class LocalPolicy(ABC):
 
 
 class GreedyLocalPolicy(LocalPolicy):
+    """Local policy that uses GreedyGeodesicFollower to generate agent actions from given global goal
+    
+    Args:
+        local_policy_cfg (CfgNode): Local policy configuration
+        navmesh_filepath (str): Path to the navmesh file
+        agent (Agent): Habitat-sim agent
+    """
     def __init__(self, local_policy_cfg: CfgNode, navmesh_filepath: str, agent: Agent):
         self._agent = agent
         self._distance_threshold = local_policy_cfg.DISTANCE_THRESHOLD
@@ -26,6 +33,14 @@ class GreedyLocalPolicy(LocalPolicy):
         self._planner = GreedyGeodesicFollower(self._path_finder, self._agent)
 
     def __call__(self, global_goal: datatypes.Coordinate3D) -> Optional[datatypes.AgentAction]:
+        """Given a global goal, generates agent action to reach the goal. If not possible, returns None
+        
+        Args:
+            global_goal (datatypes.Coordinate3D): Global goal coordinates
+        
+        Returns:
+            Optional[datatypes.AgentAction]: Agent action to reach the goal
+        """
         if self._is_agent_within_threshold(global_goal):
             return None
         global_goal_arr = np.array(global_goal)

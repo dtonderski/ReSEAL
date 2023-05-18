@@ -6,6 +6,7 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 
 class SemanticMapFeatureExtractor(BaseFeaturesExtractor):
+    """Custom feature extractor for semantic map observations."""
     def __init__(self, observation_space: spaces.Box, features_dim: int = 256):
         super().__init__(observation_space, features_dim=features_dim)
         n_input_channels = observation_space.shape[0]
