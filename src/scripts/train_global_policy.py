@@ -31,16 +31,16 @@ def main(scene_name: str = "minival/00800-TEEsavR23oF"):
     map_builder = SemanticMap3DBuilder(map_builder_cfg, sim_cfg)
     perception_model = ModelWrapper(perception_model_cfg, device='cuda')
 
-    env = HabitatEnv(sim, local_policy, map_builder, perception_model, env_cfg)
+    env = HabitatEnv(sim, local_policy, map_builder, perception_model, env_cfg, str(data_paths.navmesh_filepath))
     policy_kwargs = dict(
         features_extractor_class=SemanticMapFeatureExtractor,
         features_extractor_kwargs=dict(features_dim=256)
     )
 
-    model = PPO("CnnPolicy", env, policy_kwargs=policy_kwargs, verbose=2)
+    model = PPO("CnnPolicy", env, policy_kwargs=policy_kwargs, verbose=2, n_epochs=1, n_steps=100, device='cuda')
     logger = configure(None, ["stdout"])
     model.set_logger(logger)
-    model.learn(10)
+    model.learn(300)
 
 
 if __name__ == "__main__":

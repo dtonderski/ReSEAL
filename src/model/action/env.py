@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 
 import gymnasium as gym
 import habitat_sim
@@ -22,6 +22,8 @@ class HabitatEnv(gym.Env):
         map_builder (SemanticMap3DBuilder): The map builder
         model (ModelWrapper): The perception model
         cfg (CfgNode): Environment configuration
+        navmesh_filepath (str, optional): Path to the navmesh. Defaults to None.
+            If not None, the agent is initialized to a random point when reset is called
     """
 
     def __init__(
@@ -29,14 +31,19 @@ class HabitatEnv(gym.Env):
         sim: habitat_sim.Simulator,
         local_policy: LocalPolicy,
         map_builder: SemanticMap3DBuilder,
-        model: ModelWrapper,
+        perception_model: ModelWrapper,
         cfg: CfgNode,
+        navmesh_filepath: Optional[str] = None,
     ) -> None:
         super().__init__()
         self._sim = sim
         self._map_builder = map_builder
         self._local_policy = local_policy
-        self._model = model
+        self._perception_model = perception_model
+        self._path_finder = None
+        if navmesh_filepath:
+            self._path_finder = habitat_sim.PathFinder()
+            self._path_finder.load_nav_mesh(navmesh_filepath)
         self._cfg = cfg
         self.observation_space = create_observation_space(self._map_builder.semantic_map_at_pose_shape)
         self.action_space = create_action_space()
@@ -78,9 +85,15 @@ class HabitatEnv(gym.Env):
             datatypes.SemanticMap3D: The semantic map at the agent's initial pose
             dict: Additional info
         """
+        # Reset
         self._sim.reset()
         self._map_builder.clear()
         self._counter = 0
+        # Set agent to random pose
+        if self._path_finder:
+            new_position = self._path_finder.get_random_navigable_point()
+            self._sim.get_agent(0).set_state(habitat_sim.agent.AgentState(new_position))
+        # Get observations
         self._update_obs()
         obs = self._get_obs()
         info = {}
@@ -101,7 +114,7 @@ class HabitatEnv(gym.Env):
         depth_map = observations["depth_sensor"]  # pylint: disable=unsubscriptable-object
         position = self._sim.get_agent(0).state.position
         rotation = self._sim.get_agent(0).state.rotation
-        semantic_map = self._model(rgb[:, :, :3])
+        semantic_map = self._perception_model(rgb[:, :, :3])
         pose = (position, rotation)
         self._map_builder.update_point_cloud(semantic_map, depth_map, pose)  # type: ignore[arg-type]
 
