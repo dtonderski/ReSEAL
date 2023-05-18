@@ -44,4 +44,4 @@ class MaskRCNNDataset(Dataset):
         return len(self.imgs)
 
 def collate_fn(batch):
-    return tuple(zip(*batch))
+    return [(zip(*batch))]

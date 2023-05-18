@@ -82,7 +82,7 @@ def default_maskrcnn_cfg() -> CfgNode:
     mask_cfg = CfgNode()
     mask_cfg.NUM_EPOCHS = 30
     mask_cfg.NUM_CLASSES = 6
-    mask_cfg.BATCH_SIZE = 1
+    mask_cfg.BATCH_SIZE = 4
     mask_cfg.SHUFFLE = False
     mask_cfg.NUM_WORKERS = 4
     mask_cfg.LEARNING_RATE = 0.005
