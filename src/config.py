@@ -79,6 +79,14 @@ def default_action_module_cfg() -> CfgNode:
     return action_module_cfg
 
 
+def default_perception_model_cfg() -> CfgNode:
+    perception_model_config = CfgNode()
+    perception_model_config.USE_INITIAL_TRANSFORMS = True
+    perception_model_config.SCORE_THRESHOLD = 0.5
+    perception_model_config.MASK_THRESHOLD = 0.5
+    return perception_model_config
+
+
 def default_env_cfg() -> CfgNode:
     env_cfg = CfgNode()
     env_cfg.GLOBAL_POLICY_POLLING_FREQUENCY = 10
