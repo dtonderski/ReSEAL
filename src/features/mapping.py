@@ -316,7 +316,6 @@ class SemanticMap3DBuilder:
         # Shifting the points so that voxel wall coordinates are divisible by the resolution simplifies raytracing
         min_shift = min_point % self._resolution
         min_point = min_point - min_shift
-        max_point = max_point - min_shift
         # The above is enough if _map_size is divisible by _resolution. If not, we have to shift the max point too.
         max_shift = max_point % self._resolution
         max_point = max_point + self._resolution - max_shift
