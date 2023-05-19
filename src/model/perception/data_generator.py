@@ -1,18 +1,29 @@
-from src.model.action.pipeline import ActionPipeline
-from yacs.config import CfgNode
+from pathlib import Path, PurePath
 from typing import List, Tuple
-from pathlib import PurePath, Path
-from src.features.mapping import SemanticMap3DBuilder
-from src.utils.datatypes import SemanticMap3D, Pose
-from src.model.perception.labeler import LabelGenerator
-from src.data import scene, filepath
-from src.model.action.pipeline import create_action_pipeline
+
 import _pickle as cPickle
+import numpy as np
+import quaternion
+from habitat_sim import Simulator
+from habitat_sim.simulator import ObservationDict
+from PIL import Image
+from tqdm import trange
+from yacs.config import CfgNode
+
+from src.data import filepath, scene
+from src.features.mapping import SemanticMap3DBuilder
+from src.model.action.pipeline import ActionPipeline, create_action_pipeline
+from src.model.perception.labeler import LabelGenerator
+from src.utils.datatypes import Pose, SemanticMap3D
+
 
 class DataGenerator:
     def __init__(self, epoch_number: int, data_generator_cfg: CfgNode, data_paths_cfg: CfgNode, sim_cfg: CfgNode, 
                  map_builder_cfg: CfgNode, map_processor_cfg: CfgNode, action_module_cfg: CfgNode) -> None:
-        """ This takes 
+        """ This class is responsible for generating the training data for the perception module. It uses the action \
+            module to generate the trajectories and the semantic map builder to generate the semantic maps. The data \
+            saved is the RGBD data, the semantic data if available (this is only used for benchmarking), and the \
+            corresponding labels.
 
         Args:
             action_pipeline (ActionPipeline): _description_
@@ -66,28 +77,19 @@ class DataGenerator:
         self._epoch_number = epoch_number
         pass
     
-    def _make_dirs(self, data_paths: filepath.GenerateEpochTrajectoryFilepaths, use_semantic_sensor: bool) -> None:
-        data_paths.trajectory_output_dir.mkdir(parents=True, exist_ok=True)
-        data_paths.rgb_dir.mkdir(parents=True, exist_ok=True)
-        data_paths.depth_dir.mkdir(parents=True, exist_ok=True)
-        if use_semantic_sensor:
-            data_paths.semantic_dir.mkdir(parents=True, exist_ok=True)
-        data_paths.label_dict_dir.mkdir(parents=True, exist_ok=True)        
-    
     def __call__(self) -> None:
+        """ This does the following:
+            1. Sample scene ids from the split given in data_generator_cfg,
+            2. Step through them using the action policy defined in action_module_cfg, saving the RGBD data and \
+                storing the poses and map_builder,
+            3. Builds labels for each pose using the map_builder and saves them.
+        """
         scene_ids = self._sample_scene_ids()
         for scene_id in scene_ids:
             data_paths = filepath.GenerateEpochTrajectoryFilepaths(self._data_paths_cfg, self._data_generator_cfg.SPLIT,
                                                                    scene_id, self._epoch_number)            
-            sim = scene.initialize_sim(
-                data_paths.scene_split, data_paths.scene_id, data_paths_cfg=self._data_paths_cfg, sim_cfg=self._sim_cfg)
-
-            agent = sim.get_agent(self._sim_cfg.DEFAULT_AGENT_ID)
-            use_semantic_sensor = scene.check_if_semantic_sensor_used(sim)
-            self._make_dirs(data_paths, use_semantic_sensor)
-            action_pipeline = create_action_pipeline(self._action_module_cfg, str(data_paths.navmesh_filepath), agent)
-
-            map_builder, poses = self._step_through_trajectory(action_pipeline, sim)
+            
+            map_builder, poses = self._step_through_trajectory(data_paths)
             semantic_map = map_builder.semantic_map
             grid_index_of_origin = map_builder.get_grid_index_of_origin()
             
@@ -98,6 +100,7 @@ class DataGenerator:
                 with open((data_paths.label_dict_dir / str(t)).with_suffix('.pickle'), 'wb') as fp:
                     cPickle.dump(label_dict, fp)
 
+
     def _sample_scene_ids(self) -> List[str]:
         """ This returns a sample of all available scene_ids for the given split. 
 
@@ -106,13 +109,92 @@ class DataGenerator:
         """
         pass
     
-    def _step_through_trajectory(self, action_pipeline: ActionPipeline, scene_id: str) -> Tuple[SemanticMap3DBuilder, List[Pose]]:
+    def _step_through_trajectory(self,
+                                 data_paths: filepath.GenerateEpochTrajectoryFilepaths,
+                                 ) -> Tuple[SemanticMap3DBuilder, List[Pose]]:
         """ This steps through a scene, saving RGBD data and poses, and returns the built semantic map.
 
+        Args:
+            data_paths (filepath.GenerateEpochTrajectoryFilepaths): structure containing the data_paths to use.
+
         Returns:
-            SemanticMap3D: _description_
+            Tuple[SemanticMap3DBuilder, List[Pose]]: the map_builder, used to extract the semantic_map and 
+                grid_index_of_origin for label_building, and the poses.
         """
-        map_builder = SemanticMap3DBuilder()
-        pass
+
+        map_builder = SemanticMap3DBuilder(self._map_builder_cfg, self._sim_cfg)
+        poses = []
+        
+        sim, action_pipeline = self._initialize_sim_and_action(data_paths)
+        use_semantic_sensor = scene.check_if_semantic_sensor_used(sim)
+        self._make_dirs(data_paths, use_semantic_sensor)
+
+        for count in trange(self._data_generator_cfg.NUM_STEPS):
+            action = action_pipeline(None)  # type: ignore[arg-type]
+            # This means we are withing the threshold
+            while not action:
+                action = action_pipeline(None)  # type: ignore[arg-type]
+
+            observations: ObservationDict = sim.step(action)
+            rgb = observations["color_sensor"]  # pylint: disable=unsubscriptable-object
+            depth = observations["depth_sensor"]  # pylint: disable=unsubscriptable-object
+            semantics = observations["semantic_sensor"] if use_semantic_sensor else None
+            
+            self._save_observations(count, rgb, depth, semantics, data_paths)
+            
+            pose = (sim.get_agent(0).state.position, sim.get_agent(0).state.rotation)
+            poses.append(pose)
+            
+            map_builder.update_point_cloud(rgb, depth, pose)
+        
+        map_builder.update_semantic_map()
+        return map_builder, poses
+
+    def _initialize_sim_and_action(
+        self, data_paths: filepath.GenerateEpochTrajectoryFilepaths) -> Tuple[Simulator, ActionPipeline]:
+        """ Initializes the sim, agent, and the action pipeline given a data_paths object.
+
+        Args:
+            data_paths (filepath.GenerateEpochTrajectoryFilepaths): the data_paths object to use.
+
+        Returns:
+            Tuple[Simulator, ActionPipeline]: the initialized sim and action_pipeline.
+        """
+        sim = scene.initialize_sim(
+            data_paths.scene_split, data_paths.scene_id, data_paths_cfg=self._data_paths_cfg, sim_cfg=self._sim_cfg)
+
+        agent = sim.get_agent(self._sim_cfg.DEFAULT_AGENT_ID)
+        action_pipeline = create_action_pipeline(self._action_module_cfg, str(data_paths.navmesh_filepath), agent)
+        
+        return sim, action_pipeline
     
+    def _save_observations(
+        self, count: int, rgb, depth, semantics, data_paths: filepath.GenerateEpochTrajectoryFilepaths) -> None:
+        """ Saves the observations according to the data_paths.
+
+        Args:
+            count (int): current iteration in the simulator
+            rgb (_type_): the rgb image from the sensor
+            depth (_type_): the depth image from the sensor
+            semantics (_type_): the semantic image from the sensor, if available
+            data_paths (filepath.GenerateEpochTrajectoryFilepaths): the data_paths object to use.
+        """
+        Image.fromarray(rgb[:, :, :3]).save(data_paths.rgb_dir / f"{count}.png")
+        np.save(data_paths.depth_dir / f"{count}", depth)
+        if semantics:
+            np.save(data_paths.semantic_dir / f"{count}", semantics)            
     
+    def _make_dirs(self, data_paths: filepath.GenerateEpochTrajectoryFilepaths, use_semantic_sensor: bool) -> None:
+        """ Initializes the directories for saving the data.
+
+        Args:
+            data_paths (filepath.GenerateEpochTrajectoryFilepaths): the data_paths object to use.
+            use_semantic_sensor (bool): whether or not the semantic sensor is used, determines if the semantic dir \
+                is created.
+        """
+        data_paths.trajectory_output_dir.mkdir(parents=True, exist_ok=True)
+        data_paths.rgb_dir.mkdir(parents=True, exist_ok=True)
+        data_paths.depth_dir.mkdir(parents=True, exist_ok=True)
+        if use_semantic_sensor:
+            data_paths.semantic_dir.mkdir(parents=True, exist_ok=True)
+        data_paths.label_dict_dir.mkdir(parents=True, exist_ok=True)        
