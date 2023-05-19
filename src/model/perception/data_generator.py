@@ -106,7 +106,7 @@ class DataGenerator:
                                                           self._data_generator_cfg.SPLIT,
                                                           scene_id, epoch_number)            
             
-            map_builder, poses = self._step_through_trajectory(data_paths)
+            map_builder, poses = self._step_through_trajectory(model, data_paths)
             semantic_map = map_builder.semantic_map
             grid_index_of_origin = map_builder.get_grid_index_of_origin()
             
@@ -130,7 +130,7 @@ class DataGenerator:
         selected_scene_ids = random.sample(scene_ids, self._data_generator_cfg.NUM_SCENES)
         return selected_scene_ids
     
-    def _step_through_trajectory(self,data_paths: GenerateEpochTrajectoryFilepaths
+    def _step_through_trajectory(self, model: ModelWrapper, data_paths: GenerateEpochTrajectoryFilepaths
                                  ) -> Tuple[SemanticMap3DBuilder, List[Pose]]:
         """ This steps through a scene, saving RGBD data and poses, and returns the built semantic map.
 
