@@ -63,3 +63,49 @@ class GenerateTrajectoryFilepaths:
     @property
     def global_goals_filepath(self) -> Path:
         return self.trajectory_output_dir / "global_goals.npy"
+    
+@dataclass
+class GenerateEpochTrajectoryFilepaths:
+    data_paths_cfg: CfgNode
+    scene_split: str
+    scene_id: str
+    epoch_number: int
+
+    @property
+    def trajectory_output_dir(self) -> Path:
+        return Path(self.data_paths_cfg.TRAJECTORIES_DIR) / f"epoch_{self.epoch_number}" / self.scene_id
+
+    @property
+    def rgb_dir(self) -> Path:
+        return self.trajectory_output_dir / "RGB"
+    
+    @property
+    def depth_dir(self) -> Path:
+        return self.trajectory_output_dir / "D"
+
+    @property
+    def semantic_dir(self) -> Path:
+        return self.trajectory_output_dir / "Semantic"
+
+    @property
+    def label_dict_dir(self) -> Path:
+        return self.trajectory_output_dir / "LabelDicts"
+
+    @property
+    def navmesh_filepath(self) -> Path:
+        return (
+            Path(self.data_paths_cfg.RAW_DATA_DIR)
+            / self.scene_split
+            / "versioned_data/hm3d-0.2/hm3d"
+            / self.scene_split
+            / self.scene_id
+            / f"{self.scene_id[6:]}.basis.navmesh"
+        )
+
+    @property
+    def positions_filepath(self) -> Path:
+        return self.trajectory_output_dir / "positions.npy"
+
+    @property
+    def rotations_filepath(self) -> Path:
+        return self.trajectory_output_dir / "rotations.npy"
