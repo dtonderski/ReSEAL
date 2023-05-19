@@ -11,6 +11,8 @@ from src import config
 from src.data import filepath, scene
 from src.model.action import local_policy, pipeline
 from src.utils import datatypes
+from src.features.mapping import SemanticMap3DBuilder
+from src.model.perception.model_wrapper import ModelWrapper
 
 
 def main(
@@ -20,6 +22,7 @@ def main(
     goal_position: Optional[datatypes.Coordinate3D] = None,
     use_random_policy: bool = False,
     commands_file: Optional[str] = None,
+    use_trained_policy: Optional[bool] = False,
 ):
     start_position = np.array(start_position)  # type: ignore[assignment]
     data_paths_cfg = config.default_data_paths_cfg()
@@ -40,13 +43,12 @@ def main(
         data_paths.semantic_dir.mkdir(parents=True, exist_ok=True)
 
     # Initialize action pipeline
+    action_module_cfg = config.default_action_module_cfg()
     if goal_position:
-        action_module_cfg = config.default_action_module_cfg()
         greedy_policy = local_policy.GreedyLocalPolicy(
             action_module_cfg.LOCAL_POLICY, str(data_paths.navmesh_filepath), agent
         )
     elif use_random_policy:
-        action_module_cfg = config.default_action_module_cfg()
         action_pipeline = pipeline.create_action_pipeline(action_module_cfg, str(data_paths.navmesh_filepath), agent)
     elif commands_file:
         with open(commands_file, "r", encoding="utf-8") as file:
@@ -55,6 +57,14 @@ def main(
             raise RuntimeError(f"Scene {data_paths.scene_name} not found in commands file.")
         actions = actions[data_paths.scene_name]
         max_num_steps = len(actions)
+    elif use_trained_policy:
+        action_module_cfg.PREPROCESSOR.NAME = "IdentityPreprocessor"
+        action_module_cfg.GLOBAL_POLICY.NAME = "LoadTrainedPolicy"
+        map_builder_cfg = config.default_map_builder_cfg()
+        perception_model_cfg = config.default_perception_model_cfg()
+        action_pipeline = pipeline.create_action_pipeline(action_module_cfg, str(data_paths.navmesh_filepath), agent)
+        map_builder = SemanticMap3DBuilder(map_builder_cfg, sim_cfg)
+        perception_model = ModelWrapper(perception_model_cfg)
     else:
         raise RuntimeError("No goal position, random policy, or commands file specified.")
 
@@ -65,20 +75,8 @@ def main(
         global_goals = np.empty((max_num_steps, 3), dtype=np.float64)
 
     # Run simulation
-    count = 0
     for count in trange(max_num_steps):
-        if goal_position:
-            action = greedy_policy(goal_position)
-        elif use_random_policy:
-            action = action_pipeline(None)  # type: ignore[arg-type]
-            while not action:
-                action = action_pipeline(None)  # type: ignore[arg-type]
-            global_goals[count] = action_pipeline._global_goal  # pylint: disable=protected-access
-        else:
-            action = actions[count]
-        if not action:
-            break
-        observations: ObservationDict = sim.step(action)
+        observations = sim.get_sensor_observations(0)
         rgb = observations["color_sensor"]  # pylint: disable=unsubscriptable-object
         depth = observations["depth_sensor"]  # pylint: disable=unsubscriptable-object
         Image.fromarray(rgb[:, :, :3]).save(data_paths.rgb_dir / f"{count}.png")
@@ -88,6 +86,24 @@ def main(
             np.save(data_paths.semantic_dir / f"{count}", semantics)
         positions[count] = sim.get_agent(0).state.position
         rotations[count] = sim.get_agent(0).state.rotation
+        if goal_position:
+            action = greedy_policy(goal_position)
+        elif use_random_policy:
+            action = action_pipeline(None)  # type: ignore[arg-type]
+            while not action:
+                action = action_pipeline(None)  # type: ignore[arg-type]
+            global_goals[count] = action_pipeline._global_goal  # pylint: disable=protected-access
+        elif use_trained_policy:
+            semantic_map_2d = perception_model(rgb[:, :, :3])  # type: ignore[arg-type,has-type]
+            pose = (positions[count], rotations[count])
+            map_builder.update_point_cloud(semantic_map_2d, depth, pose)  # type: ignore[arg-type,has-type]
+            map_builder.update_semantic_map()
+            semantic_map_3d = map_builder.semantic_map_at_pose(pose)
+            action = action_pipeline(semantic_map_3d)
+        else:
+            action = actions[count]
+        if action:
+            _ = sim.step(action)
 
     # Save output
     np.save(data_paths.positions_filepath, positions)

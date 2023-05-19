@@ -58,10 +58,10 @@ class ActionPipeline:
         Returns:
             Optional[datatypes.AgentAction]: Agent action to reach the goal
         """
-        preprocessed_semantic_map = self._semantic_map_preprocessor(semantic_map).to(device=self._device)
         if self._counter.is_zero():
+            preprocessed_semantic_map = self._semantic_map_preprocessor(semantic_map).to(device=self._device)
             global_goal, _, _ = self._global_policy(preprocessed_semantic_map, self._is_deterministic)
-            self._global_goal = tuple(global_goal.numpy(force=True))  # type: ignore[assignment]
+            self._global_goal = tuple(global_goal.numpy(force=True)[0])  # type: ignore[assignment]
         self._counter.step()
         return self._local_policy(self._global_goal)
 
