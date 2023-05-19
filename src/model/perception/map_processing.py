@@ -3,7 +3,8 @@ from scipy.ndimage.measurements import find_objects, label
 from scipy.ndimage.morphology import binary_dilation
 from yacs.config import CfgNode
 
-from src.utils.datatypes import LabelMap3DCategorical, LabelMap3DOneHot, SemanticMap3D, InstanceMap3DCategorical
+from src.utils.datatypes import InstanceMap3DCategorical, LabelMap3DCategorical, LabelMap3DOneHot, SemanticMap3D
+
 
 class MapProcessor:
     """ This class processes a semantic map into a categorical label map, applies multiple morphological operations
