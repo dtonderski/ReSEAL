@@ -1,4 +1,4 @@
-from typing import Tuple, Optional
+from typing import Dict, Optional, Tuple
 
 import gymnasium as gym
 import habitat_sim
@@ -9,6 +9,7 @@ from ...features.mapping import SemanticMap3DBuilder
 from ...utils import datatypes
 from ..perception.model_wrapper import ModelWrapper
 from .local_policy import LocalPolicy
+from .preprocessing import SemanticMapPreprocessor
 from .spaces import create_action_space, create_observation_space
 
 
@@ -32,6 +33,7 @@ class HabitatEnv(gym.Env):
         local_policy: LocalPolicy,
         map_builder: SemanticMap3DBuilder,
         perception_model: ModelWrapper,
+        preprocessor: SemanticMapPreprocessor,
         cfg: CfgNode,
         navmesh_filepath: Optional[str] = None,
     ) -> None:
@@ -40,6 +42,7 @@ class HabitatEnv(gym.Env):
         self._map_builder = map_builder
         self._local_policy = local_policy
         self._perception_model = perception_model
+        self._preprocessor = preprocessor
         self._path_finder = None
         if navmesh_filepath:
             self._path_finder = habitat_sim.PathFinder()
@@ -49,7 +52,7 @@ class HabitatEnv(gym.Env):
         self.action_space = create_action_space()
         self._counter = 0
 
-    def step(self, action) -> Tuple[datatypes.SemanticMap3D, float, bool, bool, dict]:
+    def step(self, action) -> Tuple[datatypes.SemanticMap3D, float, bool, bool, Dict]:
         """Give global_policy action (ie goal coordinates), agent tries to navigate to the goal with the local policy
         for a fixed number of steps (GLOBAL_POLICY_POLLING_FREQUENCY).
         After each step, the agent's observations are updated (ie the map builder's point cloud is updated.
@@ -77,7 +80,7 @@ class HabitatEnv(gym.Env):
         info = {}  # type: ignore[var-annotated]
         return obs, reward, done, False, info
 
-    def reset(self, _seed=None, _options=None):
+    def reset(self, seed=None, options=None) -> Tuple[datatypes.SemanticMap3D, Dict]:
         """Reset the environment. This resets the simulator, map builder, and counter.
         # TODO: Initialize the agent at a random pose
 
@@ -96,7 +99,7 @@ class HabitatEnv(gym.Env):
         # Get observations
         self._update_obs()
         obs = self._get_obs()
-        info = {}
+        info = {}  # type: ignore[var-annotated]
         return obs, info
 
     def render(self):
@@ -125,8 +128,7 @@ class HabitatEnv(gym.Env):
         rotation = self._sim.get_agent(0).state.rotation
         pose = (position, rotation)
         semantic_map = self._map_builder.semantic_map_at_pose(pose)
-        semantic_map = np.transpose(semantic_map, (3, 0, 1, 2))
-        return semantic_map
+        return self._preprocessor(semantic_map).numpy(force=True)
 
     def _gainful_curiosity(self) -> float:
         """Reward function, defined as the number of voxels in the semantic map with semantic labels
