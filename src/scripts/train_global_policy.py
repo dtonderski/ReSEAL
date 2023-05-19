@@ -50,10 +50,10 @@ def main(scene_name: str = "minival/00800-TEEsavR23oF"):
         return_kwargs=True,
     )
 
-    model = PPO("CnnPolicy", env, policy_kwargs=policy_kwargs, verbose=2, n_epochs=1, n_steps=10, device="cuda")  # type: ignore[arg-type]
+    model = PPO("CnnPolicy", env, policy_kwargs=policy_kwargs, verbose=2, n_epochs=1, n_steps=100, device="cuda")  # type: ignore[arg-type]
     logger = configure(None, ["stdout"])
     model.set_logger(logger)
-    model.learn(10)
+    model.learn(300)
 
     model.policy.save(action_module_cfg.GLOBAL_POLICY.MODEL_PATH)
 

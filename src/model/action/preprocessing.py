@@ -21,6 +21,8 @@ class DummyPreprocessor(SemanticMapPreprocessor):
 class IdentityPreprocessor(SemanticMapPreprocessor):
     def __call__(self, semantic_map: datatypes.SemanticMap3D) -> torch.Tensor:
         semantic_map = np.transpose(semantic_map, (3, 0, 1, 2))
+        if len(semantic_map.shape) == 4:
+            semantic_map = np.expand_dims(semantic_map, axis=0)
         return torch.Tensor(semantic_map)
 
 

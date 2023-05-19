@@ -94,7 +94,7 @@ def create_global_policy(
     if global_policy_cfg.NAME == "LoadTrainedPolicy":
         if return_kwargs:
             raise RuntimeError("LoadTrainedPolicy does not support return_kwargs")
-        return ActorCriticPolicy.load(global_policy_cfg.MODEL_PATH)
+        return ActorCriticCnnPolicy.load(global_policy_cfg.MODEL_PATH)
     raise RuntimeError(f"Unknown global policy: {global_policy_cfg.NAME}")
 
 

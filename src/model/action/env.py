@@ -1,9 +1,10 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Generator
 
 import gymnasium as gym
 import habitat_sim
 import numpy as np
 from yacs.config import CfgNode
+import torch
 
 from ...features.mapping import SemanticMap3DBuilder
 from ...utils import datatypes
@@ -11,6 +12,35 @@ from ..perception.model_wrapper import ModelWrapper
 from .local_policy import LocalPolicy
 from .preprocessing import SemanticMapPreprocessor
 from .spaces import create_action_space, create_observation_space
+
+
+class _ObservationCache:
+    """Cache for observations. This is used to batch the observations for the perception model"""
+
+    def __init__(self):
+        self._rgb = []
+        self._depth = []
+        self._poses = []
+
+    def add(self, rgb: datatypes.RGBImage, depth: datatypes.DepthMap, pose: datatypes.Pose) -> None:
+        self._rgb.append(rgb)
+        self._depth.append(depth)
+        self._poses.append(pose)
+
+    def clear(self) -> None:
+        self._rgb.clear()
+        self._depth.clear()
+        self._poses.clear()
+
+    def get(
+        self,
+    ) -> Generator[Tuple[datatypes.RGBImage, datatypes.DepthMap, datatypes.Pose], None, None]:
+        for rgb, depth, pose in zip(self._rgb, self._depth, self._poses):
+            yield rgb, depth, pose
+
+    def get_rgb_stack_tensor(self) -> torch.Tensor:
+        rgb_stack = np.stack(self._rgb, axis=-1).transpose(3, 2, 0, 1)
+        return torch.Tensor(rgb_stack) / 255
 
 
 class HabitatEnv(gym.Env):
@@ -51,6 +81,7 @@ class HabitatEnv(gym.Env):
         self.observation_space = create_observation_space(self._map_builder.semantic_map_at_pose_shape)
         self.action_space = create_action_space()
         self._counter = 0
+        self._observation_cache = _ObservationCache()
 
     def step(self, action) -> Tuple[datatypes.SemanticMap3D, float, bool, bool, Dict]:
         """Give global_policy action (ie goal coordinates), agent tries to navigate to the goal with the local policy
@@ -92,6 +123,7 @@ class HabitatEnv(gym.Env):
         self._sim.reset()
         self._map_builder.clear()
         self._counter = 0
+        self._observation_cache.clear()
         # Set agent to random pose
         if self._path_finder:
             new_position = self._path_finder.get_random_navigable_point()
@@ -117,12 +149,16 @@ class HabitatEnv(gym.Env):
         depth_map = observations["depth_sensor"]  # pylint: disable=unsubscriptable-object
         position = self._sim.get_agent(0).state.position
         rotation = self._sim.get_agent(0).state.rotation
-        semantic_map = self._perception_model(rgb[:, :, :3])
         pose = (position, rotation)
-        self._map_builder.update_point_cloud(semantic_map, depth_map, pose)  # type: ignore[arg-type]
+        self._observation_cache.add(rgb[:, :, :3], depth_map, pose)
 
     def _get_obs(self) -> datatypes.SemanticMap3D:
         """Gets the semantic map at the current agent pose from the map builder"""
+        rgb_image_stack = self._observation_cache.get_rgb_stack_tensor()
+        semantic_map_stack = self._perception_model(rgb_image_stack)
+        for semantic_map, (_, depth, pose) in zip(semantic_map_stack, self._observation_cache.get()):
+            self._map_builder.update_point_cloud(semantic_map, depth, pose)
+        self._observation_cache.clear()
         self._map_builder.update_semantic_map()
         position = self._sim.get_agent(0).state.position
         rotation = self._sim.get_agent(0).state.rotation
