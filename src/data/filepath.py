@@ -135,3 +135,9 @@ def get_raw_data_split_dir(data_paths_cfg: CfgNode, scene_split: str) -> Path:
         / "versioned_data/hm3d-0.2/hm3d"
         / scene_split
     )
+
+def get_trajectory_data_epoch_dir(data_paths_cfg: CfgNode, epoch_number) -> Path:
+    return(
+        Path(data_paths_cfg.TRAJECTORIES_DIR)
+        / f"epoch_{epoch_number}"
+    )

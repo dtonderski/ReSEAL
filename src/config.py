@@ -80,8 +80,8 @@ def default_action_module_cfg() -> CfgNode:
 
 def default_perception_data_generator_cfg() -> CfgNode:
     data_generator_cfg = CfgNode()
-    data_generator_cfg.NUM_SCENES = 4
-    data_generator_cfg.NUM_STEPS = 200
+    data_generator_cfg.NUM_SCENES = 1
+    data_generator_cfg.NUM_STEPS = 100
     data_generator_cfg.SPLIT = 'train'
     data_generator_cfg.SEED = 0
     return data_generator_cfg
@@ -95,7 +95,7 @@ def default_model_cfg() -> CfgNode:
     
 def train_maskrcnn_cfg() -> CfgNode:
     mask_cfg = CfgNode()
-    mask_cfg.NUM_EPOCHS = 30
+    mask_cfg.NUM_EPOCHS = 2
     mask_cfg.NUM_CLASSES = 6
     mask_cfg.BATCH_SIZE = 4
     mask_cfg.SHUFFLE = False
