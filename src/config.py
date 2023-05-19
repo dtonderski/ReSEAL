@@ -64,7 +64,7 @@ def default_action_module_cfg() -> CfgNode:
     # Config for global policy
     action_module_cfg.GLOBAL_POLICY = CfgNode()
     action_module_cfg.GLOBAL_POLICY.NAME = "RandomGlobalPolicy"
-    action_module_cfg.GLOBAL_POLICY.OBSERVATION_SPACE_SHAPE = [1,1,1,1] # Shape of semantic map patch
+    action_module_cfg.GLOBAL_POLICY.OBSERVATION_SPACE_SHAPE = [100, 100, 100, 11] # Shape of semantic map patch
     # Config for global policy LR schedule
     action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE = CfgNode()
     action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE.NAME = "ConstantLR"
@@ -113,3 +113,25 @@ def train_map_builder_cfg() -> CfgNode:
     map_builder_cfg.MAP_SIZE = (25, 1.5, 25)  # (x, y, z) in m
     map_builder_cfg.NUM_SEMANTIC_CLASSES = 6
     return map_builder_cfg
+
+def perception_training_action_module_cfg() -> CfgNode:
+    action_module_cfg = CfgNode()
+    # Config for semantic map preprocessor
+    action_module_cfg.PREPROCESSOR = CfgNode()
+    action_module_cfg.PREPROCESSOR.NAME = "DummyPreprocessor"
+    # Config for global policy
+    action_module_cfg.GLOBAL_POLICY = CfgNode()
+    action_module_cfg.GLOBAL_POLICY.NAME = "RandomGlobalPolicy"
+    action_module_cfg.GLOBAL_POLICY.OBSERVATION_SPACE_SHAPE = [1,1,1,1] # Shape of semantic map patch
+    # Config for global policy LR schedule
+    action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE = CfgNode()
+    action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE.NAME = "ConstantLR"
+    action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE.INIT_LR = 0.0001
+    # Config for local policy
+    action_module_cfg.LOCAL_POLICY = CfgNode()
+    action_module_cfg.LOCAL_POLICY.DISTANCE_THRESHOLD = 0.1 #m
+    # Config for inference
+    action_module_cfg.ACTION_PIPELINE = CfgNode()
+    action_module_cfg.ACTION_PIPELINE.IS_DETERMINISTIC = True
+    action_module_cfg.ACTION_PIPELINE.GLOBAL_POLICY_POLLING_FREQUENCY = 50
+    return action_module_cfg

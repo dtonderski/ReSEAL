@@ -110,6 +110,13 @@ class GenerateEpochTrajectoryFilepaths:
     def rotations_filepath(self) -> Path:
         return self.trajectory_output_dir / "rotations.npy"
     
+    @property
+    def map_builder_filepath(self) -> Path:
+        return self.trajectory_output_dir / "map_builder.pickle"
+    
+    @property
+    def poses_filepath(self) -> Path:
+        return self.trajectory_output_dir / "poses.pickle"
 
 def get_raw_data_split_dir(data_paths_cfg: CfgNode, scene_split: str) -> Path:
     """ Gets the raw data split directory, which contains the scene-specific data directories. This is needed for data \

@@ -13,7 +13,7 @@ from tqdm import trange, tqdm
 from yacs.config import CfgNode
 
 from src.config import (
-    default_action_module_cfg,
+    perception_training_action_module_cfg,
     default_data_paths_cfg,
     default_map_builder_cfg,
     default_map_processor_cfg,
@@ -21,11 +21,13 @@ from src.config import (
     default_sim_cfg,
     default_model_cfg
 )
+from src.visualisation import instance_map_visualization
+from src.data.filepath import GenerateEpochTrajectoryFilepaths
 from src.data import filepath, scene
 from src.features.mapping import SemanticMap3DBuilder
 from src.model.action.pipeline import ActionPipeline, create_action_pipeline
 from src.model.perception.labeler import LabelGenerator
-from src.utils.datatypes import Pose
+from src.utils.datatypes import Pose, SemanticMap3D, GridIndex3D
 from src.model.perception.model_wrapper import ModelWrapper
 
 
@@ -87,7 +89,7 @@ class DataGenerator:
         self._map_processor_cfg = map_processor_cfg
         self._action_module_cfg = action_module_cfg
     
-    def __call__(self, model: ModelWrapper, epoch_number: int) -> None:
+    def __call__(self, model: ModelWrapper, epoch_number: int, visualize_instance_map = False) -> None:
         """ This does the following:
             1. Sample scene ids from the split given in data_generator_cfg,
             2. Step through them using the action policy defined in action_module_cfg, saving the RGBD data and \
@@ -100,9 +102,9 @@ class DataGenerator:
         scene_ids = self._sample_scene_ids()
         for i, scene_id in enumerate(scene_ids):
             print(f"Generating data for scene {scene_id}: {i+1}/{len(scene_ids)}.")
-            data_paths = filepath.GenerateEpochTrajectoryFilepaths(self._data_paths_cfg, 
-                                                                   self._data_generator_cfg.SPLIT,
-                                                                   scene_id, epoch_number)            
+            data_paths = GenerateEpochTrajectoryFilepaths(self._data_paths_cfg, 
+                                                          self._data_generator_cfg.SPLIT,
+                                                          scene_id, epoch_number)            
             
             map_builder, poses = self._step_through_trajectory(data_paths)
             semantic_map = map_builder.semantic_map
@@ -128,8 +130,7 @@ class DataGenerator:
         selected_scene_ids = random.sample(scene_ids, self._data_generator_cfg.NUM_SCENES)
         return selected_scene_ids
     
-    def _step_through_trajectory(self,
-                                 data_paths: filepath.GenerateEpochTrajectoryFilepaths,
+    def _step_through_trajectory(self,data_paths: GenerateEpochTrajectoryFilepaths
                                  ) -> Tuple[SemanticMap3DBuilder, List[Pose]]:
         """ This steps through a scene, saving RGBD data and poses, and returns the built semantic map.
 
@@ -142,7 +143,7 @@ class DataGenerator:
         """
 
         map_builder = SemanticMap3DBuilder(self._map_builder_cfg, self._sim_cfg)
-        poses = []
+        poses: List = []
         
         sim, action_pipeline = self._initialize_sim_and_action(data_paths)
         use_semantic_sensor = scene.check_if_semantic_sensor_used(sim)
@@ -159,9 +160,9 @@ class DataGenerator:
             rgb = observations["color_sensor"]  # pylint: disable=unsubscriptable-object
             depth = observations["depth_sensor"]  # pylint: disable=unsubscriptable-object
             semantics = observations["semantic_sensor"] if use_semantic_sensor else None
-            self._save_observations(count, rgb, depth, semantics, data_paths)
-            
+            self._save_observations_and_poses(count, rgb, depth, semantics, poses, data_paths)
             pose = (sim.get_agent(0).state.position, sim.get_agent(0).state.rotation)
+
             poses.append(pose)
             
             map = model(rgb[..., :3])
@@ -169,11 +170,12 @@ class DataGenerator:
         
         print("Updating semantic map...")
         map_builder.update_semantic_map()
+        self._save_map_builder_and_poses(map_builder, poses, data_paths)
         print("Semantic map updated!")
         return map_builder, poses
 
     def _initialize_sim_and_action(
-        self, data_paths: filepath.GenerateEpochTrajectoryFilepaths) -> Tuple[Simulator, ActionPipeline]:
+        self, data_paths: GenerateEpochTrajectoryFilepaths) -> Tuple[Simulator, ActionPipeline]:
         """ Initializes the sim, agent, and the action pipeline given a data_paths object.
 
         Args:
@@ -190,8 +192,9 @@ class DataGenerator:
         
         return sim, action_pipeline
     
-    def _save_observations(
-        self, count: int, rgb, depth, semantics, data_paths: filepath.GenerateEpochTrajectoryFilepaths) -> None:
+    def _save_observations_and_poses(
+        self, count: int, rgb, depth, semantics, poses: List[Pose], 
+        data_paths: GenerateEpochTrajectoryFilepaths) -> None:
         """ Saves the observations according to the data_paths.
 
         Args:
@@ -204,9 +207,20 @@ class DataGenerator:
         Image.fromarray(rgb[:, :, :3]).save(data_paths.rgb_dir / f"{count}.png")
         np.save(data_paths.depth_dir / f"{count}", depth)
         if semantics:
-            np.save(data_paths.semantic_dir / f"{count}", semantics)            
+            np.save(data_paths.semantic_dir / f"{count}", semantics)                       
     
-    def _make_dirs(self, data_paths: filepath.GenerateEpochTrajectoryFilepaths, use_semantic_sensor: bool) -> None:
+    def _save_map_builder_and_poses(
+        self, map_builder: SemanticMap3DBuilder, poses: List[Pose], data_paths: GenerateEpochTrajectoryFilepaths
+        ) -> None:
+        """ Saves the semantic map and grid_index_of_origin to the data_paths for visualization purposes.
+        """
+        print(f"Saving map builder to {data_paths.map_builder_filepath}.")
+        with open(data_paths.map_builder_filepath, 'wb') as fp:
+            cPickle.dump(map_builder, fp)
+        with open(data_paths.poses_filepath, 'wb') as fp:
+            cPickle.dump(poses, fp)
+    
+    def _make_dirs(self, data_paths: GenerateEpochTrajectoryFilepaths, use_semantic_sensor: bool) -> None:
         """ Initializes the directories for saving the data.
 
         Args:
@@ -225,7 +239,7 @@ class DataGenerator:
 if __name__ == '__main__':    
     data_generator = DataGenerator(default_perception_data_generator_cfg(), default_data_paths_cfg(), 
                                    default_sim_cfg(), default_map_builder_cfg(), default_map_processor_cfg(), 
-                                   default_action_module_cfg())
+                                   perception_training_action_module_cfg())
     model = ModelWrapper(default_model_cfg())
     model.cuda()
     model.eval()
