@@ -64,7 +64,7 @@ def default_action_module_cfg() -> CfgNode:
     # Config for global policy
     action_module_cfg.GLOBAL_POLICY = CfgNode()
     action_module_cfg.GLOBAL_POLICY.NAME = "RandomGlobalPolicy"
-    action_module_cfg.GLOBAL_POLICY.OBSERVATION_SPACE_SHAPE = [100, 100, 100, 11] # Shape of semantic map patch
+    action_module_cfg.GLOBAL_POLICY.OBSERVATION_SPACE_SHAPE = [1,1,1,1] # Shape of semantic map patch
     # Config for global policy LR schedule
     action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE = CfgNode()
     action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE.NAME = "ConstantLR"
@@ -77,6 +77,21 @@ def default_action_module_cfg() -> CfgNode:
     action_module_cfg.ACTION_PIPELINE.IS_DETERMINISTIC = True
     action_module_cfg.ACTION_PIPELINE.GLOBAL_POLICY_POLLING_FREQUENCY = 10
     return action_module_cfg
+
+def default_perception_data_generator_cfg() -> CfgNode:
+    data_generator_cfg = CfgNode()
+    data_generator_cfg.NUM_SCENES = 4
+    data_generator_cfg.NUM_STEPS = 200
+    data_generator_cfg.SPLIT = 'train'
+    data_generator_cfg.SEED = 0
+    return data_generator_cfg
+
+def default_model_cfg() -> CfgNode:
+    model_config = CfgNode()
+    model_config.USE_INITIAL_TRANSFORMS = True
+    model_config.SCORE_THRESHOLD = 0.5
+    model_config.MASK_THRESHOLD = 0.5
+    return model_config
     
 def train_maskrcnn_cfg() -> CfgNode:
     mask_cfg = CfgNode()
@@ -91,11 +106,6 @@ def train_maskrcnn_cfg() -> CfgNode:
     mask_cfg.OPTIM_STEP_SIZE = 3
     mask_cfg.OPTIM_GAMMA = 0.1    
     return mask_cfg
-
-def perception_trainer_cfg() -> CfgNode:
-    per_trainer_cfg = CfgNode()
-    per_trainer_cfg.MAX_TRAJECTORY_LENGTH = 200
-    per_trainer_cfg.USE_RANDOM_POLICY = True
 
 def train_map_builder_cfg() -> CfgNode:
     map_builder_cfg = CfgNode()

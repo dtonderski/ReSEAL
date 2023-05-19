@@ -110,9 +110,21 @@ class GenerateEpochTrajectoryFilepaths:
     def rotations_filepath(self) -> Path:
         return self.trajectory_output_dir / "rotations.npy"
     
-    @property
-    def raw_data_dir(self) -> Path:
-        return(Path(self.data_paths_cfg.RAW_DATA_DIR)
-            / self.scene_split
-            / "versioned_data/hm3d-0.2/hm3d"
-            / self.scene_split)
+
+def get_raw_data_split_dir(data_paths_cfg: CfgNode, scene_split: str) -> Path:
+    """ Gets the raw data split directory, which contains the scene-specific data directories. This is needed for data \
+        generation for perception.
+
+    Args:
+        data_paths_cfg (CfgNode): the data paths config, must contain RAW_DATA_DIR.
+        scene_split (str): one of "train", "val", "minival", "test".
+
+    Returns:
+        Path: the path to the raw data split directory.
+    """
+    return(
+        Path(data_paths_cfg.RAW_DATA_DIR)
+        / scene_split
+        / "versioned_data/hm3d-0.2/hm3d"
+        / scene_split
+    )
