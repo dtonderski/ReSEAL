@@ -109,3 +109,10 @@ class GenerateEpochTrajectoryFilepaths:
     @property
     def rotations_filepath(self) -> Path:
         return self.trajectory_output_dir / "rotations.npy"
+    
+    @property
+    def raw_data_dir(self) -> Path:
+        return(Path(self.data_paths_cfg.RAW_DATA_DIR)
+            / self.scene_split
+            / "versioned_data/hm3d-0.2/hm3d"
+            / self.scene_split)

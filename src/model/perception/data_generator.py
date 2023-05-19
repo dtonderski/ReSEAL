@@ -6,7 +6,10 @@ import numpy as np
 import quaternion
 from habitat_sim import Simulator
 from habitat_sim.simulator import ObservationDict
+import os
+import random
 from PIL import Image
+
 from tqdm import trange
 from yacs.config import CfgNode
 
@@ -31,6 +34,7 @@ class DataGenerator:
                 - NUM_SCENES: int - number of scenes to sample from
                 - NUM_STEPS: int - number of steps to take in each scene
                 - SPLIT: str - one of ['train', 'val', 'minval', 'test']
+                - SEED: int - specify the random selection of scenes
             data_paths_cfg (CfgNode): needs the following:
                 - TRAJECTORIES_DIR: str
                 - RAW_DATA_DIR: str
@@ -101,13 +105,19 @@ class DataGenerator:
                     cPickle.dump(label_dict, fp)
 
 
-    def _sample_scene_ids(self) -> List[str]:
+    def _sample_scene_ids(self, 
+                        data_paths: filepath.GenerateEpochTrajectoryFilepaths
+                        ) -> List[str]:
         """ This returns a sample of all available scene_ids for the given split. 
 
         Returns:
             List[PurePath]: _description_
         """
-        pass
+        raw_split_path = data_paths.raw_data_split_dir
+        scene_ids = list(sorted([f.name for f in os.scandir(raw_split_path) if f.is_dir()]))
+        random.seed(self._data_generator_cfg.SEED)
+        selected_scene_ids = random.sample(scene_ids, self.data_generator_cfg.NUM_SCENES)
+        return selected_scene_ids
     
     def _step_through_trajectory(self,
                                  data_paths: filepath.GenerateEpochTrajectoryFilepaths,
