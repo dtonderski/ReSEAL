@@ -54,6 +54,7 @@ class HabitatEnv(gym.Env):
         self.action_space = create_action_space()
         self._counter = 0
         self._observation_cache = ObservationCache()
+        self._reward_base = 0
 
     def step(self, action) -> Tuple[datatypes.SemanticMap3D, float, bool, bool, Dict]:
         """Give global_policy action (ie goal coordinates), agent tries to navigate to the goal with the local policy
@@ -96,6 +97,7 @@ class HabitatEnv(gym.Env):
         self._map_builder.clear()
         self._counter = 0
         self._observation_cache.clear()
+        self._reward_base = 0
         # Set agent to random pose
         if self._path_finder:
             new_position = self._path_finder.get_random_navigable_point()
@@ -142,4 +144,7 @@ class HabitatEnv(gym.Env):
         """Reward function, defined as the number of voxels in the semantic map with semantic labels
         whose confidence is above a threshold"""
         semantic_map = self._map_builder.semantic_map
-        return np.sum(semantic_map[:, :, :, 1:] >= self._cfg.GAINFUL_CURIOUSITY_THRESHOLD)
+        reward = np.sum(semantic_map[:, :, :, 1:] >= self._cfg.GAINFUL_CURIOUSITY_THRESHOLD)
+        rew = reward - self._reward_base
+        self._reward_base = reward
+        return rew
