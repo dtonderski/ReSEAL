@@ -135,5 +135,10 @@ dmypy.json
 /data/
 .vscode/
 /notebooks/dev/
+
+# Runs
 /models/
 /wandb/
+
+# Euler
+/server_out/
