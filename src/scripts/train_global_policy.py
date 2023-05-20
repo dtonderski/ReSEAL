@@ -11,9 +11,25 @@ from src.data import scene, filepath
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.logger import configure
+import wandb
+from wandb.integration.sb3 import WandbCallback
 
 
 def main(scene_name: str = "minival/00800-TEEsavR23oF"):
+    wandb.login()
+    config = {
+        "policy_type": "PPO",
+        "env_name": "HabitatEnv",
+        "total_timesteps": 10000,
+    }
+    run = wandb.init(
+        project="reseal",
+        config=config,
+        sync_tensorboard=True,
+        monitor_gym=False,
+        save_code=True,
+    )
+
     env_cfg = cfg.default_env_cfg()
     sim_cfg = cfg.default_sim_cfg()
     action_module_cfg = cfg.default_action_module_cfg()
@@ -49,12 +65,29 @@ def main(scene_name: str = "minival/00800-TEEsavR23oF"):
         return_kwargs=True,
     )
 
-    model = PPO("CnnPolicy", env, policy_kwargs=policy_kwargs, verbose=2, n_epochs=1, n_steps=100, device="cuda")  # type: ignore[arg-type]
-    logger = configure(None, ["stdout"])
-    model.set_logger(logger)
-    model.learn(300)
+    model = PPO(
+        "CnnPolicy",
+        env,
+        policy_kwargs=policy_kwargs,  # type: ignore[arg-type]
+        verbose=2,
+        n_epochs=10,
+        n_steps=100,
+        device="cuda",
+        tensorboard_log="runs/{run.id}",
+    )
+    model.learn(
+        total_timesteps=config["total_timesteps"],  # type: ignore[arg-type]
+        callback=WandbCallback(
+            gradient_save_freq=100,
+            model_save_path=action_module_cfg.GLOBAL_POLICY.MODEL_PATH,
+            model_save_freq=100,
+            verbose=2,
+        )
+    )
+    model_save_path = action_module_cfg.GLOBAL_POLICY.MODEL_PATH + f"/{run.id}.pth"  # type: ignore[union-attr]
+    model.policy.save(model_save_path)
 
-    model.policy.save(action_module_cfg.GLOBAL_POLICY.MODEL_PATH)
+    run.finish()  # type: ignore[union-attr]
 
 
 if __name__ == "__main__":

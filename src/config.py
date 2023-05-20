@@ -64,7 +64,7 @@ def default_action_module_cfg() -> CfgNode:
     # Config for global policy
     action_module_cfg.GLOBAL_POLICY = CfgNode()
     action_module_cfg.GLOBAL_POLICY.NAME = "RandomGlobalPolicy"
-    action_module_cfg.GLOBAL_POLICY.MODEL_PATH = "models/global_policy_model.pth"
+    action_module_cfg.GLOBAL_POLICY.MODEL_PATH = "models/action/"
     action_module_cfg.GLOBAL_POLICY.MAP_SHAPE = (40, 40, 40, 7)
     # Config for global policy LR schedule
     action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE = CfgNode()
@@ -91,7 +91,7 @@ def default_perception_model_cfg() -> CfgNode:
 
 def default_env_cfg() -> CfgNode:
     env_cfg = CfgNode()
-    env_cfg.GLOBAL_POLICY_POLLING_FREQUENCY = 8
+    env_cfg.GLOBAL_POLICY_POLLING_FREQUENCY = 10
     env_cfg.GAINFUL_CURIOUSITY_THRESHOLD = 0.9
     env_cfg.MAX_STEPS = 100
     return env_cfg
