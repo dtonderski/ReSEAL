@@ -1,15 +1,14 @@
-import contextlib
 import json
 import os
 from pathlib import Path
-import sys
-from typing import Tuple
+from typing import Set, Tuple, Optional
 
 import habitat_sim
 import numpy as np
 from yacs.config import CfgNode
 
-from ..config import default_data_paths_cfg, default_sim_cfg, default_sensor_cfg
+from ..config import default_data_paths_cfg, default_sensor_cfg, default_sim_cfg
+
 
 def initialize_sim(
     scene_split: str, scene_id: str, data_paths_cfg: CfgNode = None, sim_cfg: CfgNode = None, verbose: bool = False,
@@ -133,14 +132,7 @@ def get_scene_info(scene_split: str, scene_id: str, data_paths_cfg: CfgNode = No
     if data_paths_cfg is None:
         data_paths_cfg = default_data_paths_cfg()
 
-    annotated_scene_config_path: Path = Path(
-        data_paths_cfg.RAW_DATA_DIR, scene_split, data_paths_cfg.ANNOTATED_SCENE_CONFIG_PATH_IN_SPLIT
-    )
-
-    with annotated_scene_config_path.open(encoding="utf-8") as file:
-        annotated_scene_config = json.load(file)
-
-    annotated_scene_set = {Path(x).parents[0] for x in annotated_scene_config["stages"]["paths"][".glb"]}
+    annotated_scene_set = get_annotated_scene_set(data_paths_cfg)
     use_semantic_sensor = Path(scene_split, scene_id) in annotated_scene_set
 
     scene_id_without_index = scene_id.split("-")[1]
@@ -196,3 +188,18 @@ def get_sensor_spec(sensor_type: str, sensor_cfg: CfgNode = None) -> habitat_sim
     sensor_spec.ortho_scale = sensor_cfg.ORTHO_SCALE
 
     return sensor_spec
+
+
+def get_annotated_scene_set(data_paths_cfg: Optional[CfgNode] = None) -> Set[Path]:
+    """ Returns the ids of all scenes that support a semantic sensor.
+    """
+    if data_paths_cfg is None:
+        data_paths_cfg = default_data_paths_cfg()
+    annotated_scene_config_path: Path = Path(
+        data_paths_cfg.RAW_DATA_DIR, 'train', data_paths_cfg.ANNOTATED_SCENE_CONFIG_PATH_IN_SPLIT
+    )
+
+    with annotated_scene_config_path.open(encoding="utf-8") as file:
+        annotated_scene_config = json.load(file)
+
+    return {Path(x).parents[0] for x in annotated_scene_config["stages"]["paths"][".glb"]}
