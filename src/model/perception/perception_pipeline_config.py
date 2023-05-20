@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+import os
 
 from yacs.config import CfgNode
 
@@ -36,7 +36,7 @@ def data_paths_cfg():
     """ Here, you might have to modify the DATA_DIR if you have downloaded the data to a different location.
     """
     data_paths_cfg = CfgNode()
-    data_paths_cfg.DATA_DIR = str(Path("data"))
+    data_paths_cfg.DATA_DIR = str(Path(os.environ['SCRATCH'], "3dvis", "ReSEAL", "data"))
     data_paths_cfg.RAW_DATA_DIR = str(Path(data_paths_cfg.DATA_DIR, "raw"))
     data_paths_cfg.INTERIM_DATA_DIR = str(Path(data_paths_cfg.DATA_DIR, "interim"))
     data_paths_cfg.TRAJECTORIES_DIR = str(Path(data_paths_cfg.INTERIM_DATA_DIR, "trajectories"))
