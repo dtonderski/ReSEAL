@@ -9,18 +9,7 @@ from ...utils import datatypes
 from .global_policy import create_global_policy
 from .local_policy import GreedyLocalPolicy, LocalPolicy
 from .preprocessing import SemanticMapPreprocessor, create_preprocessor
-
-
-class _Counter:
-    def __init__(self, max: int):
-        self._max = max
-        self._counter = 0
-
-    def step(self) -> None:
-        self._counter = (self._counter + 1) % self._max
-
-    def is_zero(self) -> bool:
-        return self._counter == 0
+from .utils import Counter
 
 
 class ActionPipeline:
@@ -46,10 +35,10 @@ class ActionPipeline:
         self._local_policy = local_policy
         self._is_deterministic = action_pipeline_cfg.IS_DETERMINISTIC
         self._global_goal: datatypes.Coordinate3D = (0, 0, 0)
-        self._counter = _Counter(action_pipeline_cfg.GLOBAL_POLICY_POLLING_FREQUENCY)
+        self._counter = Counter(action_pipeline_cfg.GLOBAL_POLICY_POLLING_FREQUENCY)
         self._device = torch.device("cuda")
 
-    def __call__(self, semantic_map: datatypes.SemanticMap3D) -> Optional[datatypes.AgentAction]:
+    def forward(self, semantic_map: datatypes.SemanticMap3D) -> Optional[datatypes.AgentAction]:
         """Given a semantic map, generates agent action to reach the goal. If not possible, returns None
 
         Args:
@@ -58,12 +47,20 @@ class ActionPipeline:
         Returns:
             Optional[datatypes.AgentAction]: Agent action to reach the goal
         """
-        if self._counter.is_zero():
+        if self.is_update_global_goal():
             preprocessed_semantic_map = self._semantic_map_preprocessor(semantic_map).to(device=self._device)
             global_goal, _, _ = self._global_policy(preprocessed_semantic_map, self._is_deterministic)
             self._global_goal = tuple(global_goal.numpy(force=True)[0])  # type: ignore[assignment]
         self._counter.step()
         return self._local_policy(self._global_goal)
+
+    def is_update_global_goal(self) -> bool:
+        """Returns whether the global goal should be updated
+
+        Returns:
+            bool: Whether the global goal should be updated
+        """
+        return self._counter.is_zero()
 
 
 def create_action_pipeline(action_module_cfg: CfgNode, navmesh_filepath: str, agent: Agent) -> ActionPipeline:

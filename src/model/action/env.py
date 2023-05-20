@@ -1,10 +1,10 @@
-from typing import Dict, Optional, Tuple, Generator
+from typing import Dict, Generator, Optional, Tuple
 
 import gymnasium as gym
 import habitat_sim
 import numpy as np
-from yacs.config import CfgNode
 import torch
+from yacs.config import CfgNode
 
 from ...features.mapping import SemanticMap3DBuilder
 from ...utils import datatypes
@@ -12,35 +12,7 @@ from ..perception.model_wrapper import ModelWrapper
 from .local_policy import LocalPolicy
 from .preprocessing import SemanticMapPreprocessor
 from .spaces import create_action_space, create_observation_space
-
-
-class _ObservationCache:
-    """Cache for observations. This is used to batch the observations for the perception model"""
-
-    def __init__(self):
-        self._rgb = []
-        self._depth = []
-        self._poses = []
-
-    def add(self, rgb: datatypes.RGBImage, depth: datatypes.DepthMap, pose: datatypes.Pose) -> None:
-        self._rgb.append(rgb)
-        self._depth.append(depth)
-        self._poses.append(pose)
-
-    def clear(self) -> None:
-        self._rgb.clear()
-        self._depth.clear()
-        self._poses.clear()
-
-    def get(
-        self,
-    ) -> Generator[Tuple[datatypes.RGBImage, datatypes.DepthMap, datatypes.Pose], None, None]:
-        for rgb, depth, pose in zip(self._rgb, self._depth, self._poses):
-            yield rgb, depth, pose
-
-    def get_rgb_stack_tensor(self) -> torch.Tensor:
-        rgb_stack = np.stack(self._rgb, axis=-1).transpose(3, 2, 0, 1)
-        return torch.Tensor(rgb_stack) / 255
+from .utils import ObservationCache
 
 
 class HabitatEnv(gym.Env):
@@ -81,7 +53,7 @@ class HabitatEnv(gym.Env):
         self.observation_space = create_observation_space(self._map_builder.semantic_map_at_pose_shape)
         self.action_space = create_action_space()
         self._counter = 0
-        self._observation_cache = _ObservationCache()
+        self._observation_cache = ObservationCache()
 
     def step(self, action) -> Tuple[datatypes.SemanticMap3D, float, bool, bool, Dict]:
         """Give global_policy action (ie goal coordinates), agent tries to navigate to the goal with the local policy
