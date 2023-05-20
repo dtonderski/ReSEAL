@@ -76,7 +76,7 @@ def default_action_module_cfg() -> CfgNode:
     # Config for inference
     action_module_cfg.ACTION_PIPELINE = CfgNode()
     action_module_cfg.ACTION_PIPELINE.IS_DETERMINISTIC = False
-    action_module_cfg.ACTION_PIPELINE.GLOBAL_POLICY_POLLING_FREQUENCY = 10
+    action_module_cfg.ACTION_PIPELINE.GLOBAL_POLICY_POLLING_FREQUENCY = 25
     return action_module_cfg
 
 
