@@ -8,7 +8,14 @@ from src.features.perception import propagate_labels
 from src.model.perception.map_processing import MapProcessor
 from src.model.perception.model_wrapper import LabelDict
 from src.utils.category_mapping import get_instance_index_to_reseal_index_dict
-from src.utils.datatypes import InstanceMap3DCategorical, LabelMap3DCategorical, Pose, SemanticMap2D, SemanticMap3D
+from src.utils.datatypes import (
+    GridIndex3D,
+    InstanceMap3DCategorical,
+    LabelMap3DCategorical,
+    Pose,
+    SemanticMap2D,
+    SemanticMap3D,
+)
 
 
 class LabelGenerator:
@@ -31,7 +38,7 @@ class LabelGenerator:
     def categorical_instance_map(self) -> InstanceMap3DCategorical:
         return self._map_processor.categorical_instance_map
 
-    def __init__(self, semantic_map: SemanticMap3D, grid_index_of_origin: NDArray[Shape["3"], Int],
+    def __init__(self, semantic_map: SemanticMap3D, grid_index_of_origin: GridIndex3D,
                  map_builder_cfg: CfgNode, map_processor_cfg: CfgNode, sensor_cfg: CfgNode):
         self._semantic_map = semantic_map
         self._grid_index_of_origin = grid_index_of_origin
