@@ -13,6 +13,7 @@ from src.model.action import local_policy, pipeline
 from src.utils import datatypes
 from src.features.mapping import SemanticMap3DBuilder
 from src.model.perception.model_wrapper import ModelWrapper
+from src.model.action.utils import Counter, ObservationCache
 
 
 def main(
@@ -68,6 +69,8 @@ def main(
         action_module_cfg.GLOBAL_POLICY.NAME = "LoadTrainedPolicy"
         action_module_cfg.GLOBAL_POLICY.MAP_SHAPE = map_builder.semantic_map_at_pose_shape
         action_pipeline = pipeline.create_action_pipeline(action_module_cfg, str(data_paths.navmesh_filepath), agent)
+        # Initialize observation cache to batch perception model inference
+        observation_cache = ObservationCache()
     else:
         raise RuntimeError("No goal position, random policy, or commands file specified.")
 
@@ -92,17 +95,21 @@ def main(
         if goal_position:
             action = greedy_policy(goal_position)
         elif use_random_policy:
-            action = action_pipeline(None)  # type: ignore[arg-type]
+            action = action_pipeline.forward(None)  # type: ignore[arg-type]
             while not action:
-                action = action_pipeline(None)  # type: ignore[arg-type]
+                action = action_pipeline.forward(None)  # type: ignore[arg-type]
             global_goals[count] = action_pipeline._global_goal  # pylint: disable=protected-access
         elif use_trained_policy:
-            semantic_map_2d = perception_model(rgb[:, :, :3])  # type: ignore[arg-type,has-type]
             pose = (positions[count], rotations[count])
-            map_builder.update_point_cloud(semantic_map_2d, depth, pose)  # type: ignore[arg-type,has-type]
-            map_builder.update_semantic_map()
+            observation_cache.add(rgb[:, :, :3], depth, pose)
+            if action_pipeline.is_update_global_goal():
+                semantic_map_stack = perception_model(observation_cache.get_rgb_stack_tensor())
+                for semantic_map_2d, (_, depth, pose) in zip(semantic_map_stack, observation_cache.get()):
+                    map_builder.update_point_cloud(semantic_map_2d, depth, pose)
+                map_builder.update_semantic_map()
+                observation_cache.clear()
             semantic_map_3d = map_builder.semantic_map_at_pose(pose)
-            action = action_pipeline(semantic_map_3d)
+            action = action_pipeline.forward(semantic_map_3d)
         else:
             action = actions[count]
         if action:
