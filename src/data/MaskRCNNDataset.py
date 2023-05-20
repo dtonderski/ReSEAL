@@ -24,20 +24,21 @@ class MaskRCNNDataset(Dataset):
     def label_generator(self, label_generator):
         self._label_generator = label_generator
 
-    def __init__(self, data_paths_cfg: CfgNode, scene_split:str, epoch_number, transforms = MaskRCNN_ResNet50_FPN_Weights.DEFAULT.transforms()):
+    def __init__(self, data_paths_cfg: CfgNode, scene_split:str, epoch: int, 
+                 transforms = MaskRCNN_ResNet50_FPN_Weights.DEFAULT.transforms()):
         self._transforms = transforms
         self._data_paths_cfg = data_paths_cfg
         
 
         # might use data_path_cfg
-        epoch_dir_path = filepath.get_trajectory_data_epoch_dir(data_paths_cfg, epoch_number)
+        epoch_dir_path = filepath.get_trajectory_data_epoch_dir(data_paths_cfg, epoch)
         self._root = epoch_dir_path
         scene_ids = list(sorted([f.name for f in os.scandir(epoch_dir_path) if f.is_dir()]))
 
         imgs_paths = []
         label_dict_paths = []
         for scene in scene_ids:
-            trajectory_output_dir = Path(data_paths_cfg.TRAJECTORIES_DIR) / f'epoch_{epoch_number}' / scene
+            trajectory_output_dir = Path(data_paths_cfg.TRAJECTORIES_DIR) / f'epoch_{epoch}' / scene
             scene_rgb_path = trajectory_output_dir / 'RGB'
             imgs_paths += [scene_rgb_path/ path for path in list(sorted(os.listdir(scene_rgb_path)))]
             scene_label_dict_path = trajectory_output_dir / "LabelDicts"
