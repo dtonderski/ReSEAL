@@ -140,7 +140,8 @@ class ModelWrapper():
                  model_input: Union[Float[torch.Tensor, "B C H W"],
                               Float[np.ndarray, "H W C"]],
                  labels: Optional[Union[List[LabelDict], LabelDict]] = None,
-                 label_indices_in_reseal_space = True) -> Union[List[SemanticMap2D], SemanticMap2D, List[LossDict]]:
+                 label_indices_in_reseal_space = True) -> Union[List[SemanticMap2D], SemanticMap2D, List[LossDict], 
+                                                                LossDict]:
         """ If the model is in train mode, labels must be provided, and it returns the loss dictionary. \
             If the model is in eval mode, labels must not be provided, and it returns a SemanticMap2D.
 
