@@ -95,3 +95,13 @@ def default_env_cfg() -> CfgNode:
     env_cfg.GAINFUL_CURIOUSITY_THRESHOLD = 0.9
     env_cfg.MAX_STEPS = 100
     return env_cfg
+
+
+def default_action_training_cfg() -> CfgNode:
+    action_training_cfg = CfgNode()
+    action_training_cfg.NUM_EPOCHS = 10
+    action_training_cfg.BATCH_SIZE = 32
+    action_training_cfg.NUM_STEPS_PER_EPISODE = 100
+    action_training_cfg.NUM_TOTAL_STEPS = 10000
+    action_training_cfg.MODEL_PATH = ""
+    return action_training_cfg
