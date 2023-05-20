@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Dict
 
 from yacs.config import CfgNode
 
@@ -31,16 +31,30 @@ class WandbPerceptionLogger:
         NOTE: because the run name is based on the unusual config values, you MUST call WandbPerceptionLogger.init()
         manually.
     """
-    def __init__(self, run_name: Optional[str]):
+    @property
+    def config(self):
+        return wandb.config
+    
+    def __init__(self, perception_cfg: CfgNode):
         """ Initializes the wandb run. """
         wandb.init(
             entity='davton',
             project='reseal',
-            name=run_name
+            name=self._get_run_name(perception_cfg),
         )
 
         wandb.define_metric("batch")
         wandb.define_metric("epoch")
+        self.add_config("perception_cfg", perception_cfg)
+    
+    @staticmethod
+    def _get_run_name(perception_cfg: CfgNode):
+        """ Returns a string that can be used as the run name. """
+        if "run_name" in perception_cfg:
+            return perception_cfg.run_name
+        else:
+            return (f"num_scenes: {perception_cfg.DATA_GENERATOR.NUM_SCENES}, "
+                    f"num_steps: {perception_cfg.DATA_GENERATOR.NUM_STEPS}")
 
     def on_epoch_end(self, epoch):
         """ Log the epoch and commit to server.
@@ -75,8 +89,8 @@ class WandbPerceptionLogger:
         """ Adds a configuration dictionary to the wandb config. """
         wandb.config[cfg_dict_name] = cfg_node_to_dict(cfg_node)
     
-    def add_unusual_config(self, key: str, value: Any) -> None:
-        """ This adds a key-value pair to the "unusual" wandb config dictionary. This is used because our configuration 
+    def add_unusual_config(self, config_dict: Dict[str, Any]) -> None:
+        """ This adds a config dictionary to the "unusual" wandb config key. This is used because our configuration 
             has ~100 elements, so figuring out which ones are non-default would be very hard without this. We store 
             both this and the normal config dictionary in case the default config changes in the future.
 
@@ -86,7 +100,7 @@ class WandbPerceptionLogger:
         """
         if 'unusual' not in wandb.config:
             wandb.config['unusual'] = {}
-        wandb.config['unusual'][key] = value
+        wandb.config['unusual'].update(config_dict)
 
 # def main():
 #     wandb_logger = WandbPerceptionLogger("test2")

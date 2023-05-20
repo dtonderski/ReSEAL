@@ -1,5 +1,7 @@
 import os
 import random
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from typing import List, Optional, Tuple
 
 import _pickle as cPickle
@@ -21,63 +23,55 @@ from src.utils.datatypes import Pose
 
 
 class DataGenerator:
-    def __init__(self, data_generator_cfg: CfgNode, data_paths_cfg: CfgNode, sim_cfg: CfgNode, 
-                 map_builder_cfg: CfgNode, map_processor_cfg: CfgNode, action_module_cfg: CfgNode,
-                 wandb_logger: Optional[WandbPerceptionLogger] = None) -> None:
+    def __init__(self, perception_cfg: CfgNode, wandb_logger: Optional[WandbPerceptionLogger] = None) -> None:
         """ This class is responsible for generating the training data for the perception module. It uses the action \
             module to generate the trajectories and the semantic map builder to generate the semantic maps. The data \
             saved is the RGBD data, the semantic data if available (this is only used for benchmarking), and the \
             corresponding labels.
 
         Args:
-            data_generator_cfg (CfgNode): needs the following:
-                - NUM_SCENES: int - number of scenes to sample from
-                - NUM_STEPS: int - number of steps to take in each scene
-                - SPLIT: str - one of ['train', 'val', 'minval', 'test']
-                - SEED: int - specify the random selection of scenes. If None, will use current system time.
-            data_paths_cfg (CfgNode): needs the following:
-                - ANNOTATED_SCENE_CONFIG_PATH_IN_SPLIT: str
-                - TRAJECTORIES_DIR: str
-                - RAW_DATA_DIR: str
-            sim_cfg (CfgNode): needs the following:
-                - DEFAULT_POSITION: list[float]
-                - SENSOR_CFG, needs the following:
-                    - HEIGHT: int
-                    - WIDTH: int
-                    - HFOV: float
-                    - DEFAULT_AGENT_ID: int
-            map_builder_cfg (CfgNode): Semantic map builder cfguration, including: 
-                - RESOLUTION: Resolution of the voxel grid, in meters per voxel 
-                - NUM_SEMANTIC_CLASSES: Number of semantic classes, should be 6 for default ReSEAL cfg 
-
-            map_processor_cfg (CfgNode): config of the map processor. Must include 
-                - NO_OBJECT_CONFIDENCE_THRESHOLD (float)
-                - HOLE_VOXEL_THRESHOLD (int)
-                - OBJECT_VOXEL_THRESHOLD (int)
-                - DILATE (bool)
-            
-            action_module_cfg (CfgNode): config of the action module. Must include
-                - PREPROCESSOR (str) - should be "DummyPreprocessor" for now.
-                - GLOBAL_POLICY (CfgNode) - config of the global policy. Must include
-                    - NAME (str) - should be "RandomGlobalPolicy" for now.
-                    - LR_SCHEDULE (CfgNode) - config of the learning rate scheduler. Must include
-                        - NAME (str) - should be "ConstantLR" for now.
-                        - INIT_LR (float) - initial learning rate. This is used for the action policy, so can be \
-                            arbitrary.
-                    - OBSERVATION_SPACE_SHAPE (list[int]) - unused here, can be arbitrary, e.g. to [100, 100, 100, 11].
-                - LOCAL_POLICY (CfgNode) - config of the local policy. Must include
-                    - DISTANCE_THRESHOLD (float) - this means that the position is accepted
-                - ACTION_PIPELINE (CfgNode) - config of the action pipeline. Must include
-                    - IS_DETERMINISTIC (bool) - whether the action pipeline is deterministic or not.
-                    - GLOBAL_POLICY_POLLING_FREQUENCY (int) - how often the global policy is polled.
+            perception_cfg (CfgNode): perception module configuration. Needs the following:
+                DATA_GENERATOR (CfgNode): needs the following:
+                    - NUM_SCENES: int - number of scenes to sample from
+                    - NUM_STEPS: int - number of steps to take in each scene
+                    - SPLIT: str - one of ['train', 'val', 'minval', 'test']
+                    - SEED: int - specify the random selection of scenes. If None, will use current system time.
+                DATA_PATHS (CfgNode): needs the following:
+                    - ANNOTATED_SCENE_CONFIG_PATH_IN_SPLIT: str
+                    - TRAJECTORIES_DIR: str
+                    - RAW_DATA_DIR: str
+                SIM (CfgNode): needs the following:
+                    - DEFAULT_POSITION: list[float]
+                    - SENSOR_CFG, needs the following:
+                        - HEIGHT: int
+                        - WIDTH: int
+                        - HFOV: float
+                        - DEFAULT_AGENT_ID: int
+                MAP_BUILDER (CfgNode): Semantic map builder cfguration, including: 
+                    - RESOLUTION: Resolution of the voxel grid, in meters per voxel 
+                    - NUM_SEMANTIC_CLASSES: Number of semantic classes, should be 6 for default ReSEAL cfg 
+                MAP_PROCESSOR (CfgNode): config of the map processor. Must include 
+                    - NO_OBJECT_CONFIDENCE_THRESHOLD (float)
+                    - HOLE_VOXEL_THRESHOLD (int)
+                    - OBJECT_VOXEL_THRESHOLD (int)
+                    - DILATE (bool)
+                ACTION_MODULE (CfgNode): config of the action module. Must include
+                    - PREPROCESSOR (str) - should be "DummyPreprocessor" for now.
+                    - GLOBAL_POLICY (CfgNode) - config of the global policy. Must include
+                        - NAME (str) - should be "RandomGlobalPolicy" for now.
+                        - LR_SCHEDULE (CfgNode) - config of the learning rate scheduler. Must include
+                            - NAME (str) - should be "ConstantLR" for now.
+                            - INIT_LR (float) - initial learning rate. This is used for the action policy, so can be \
+                                arbitrary.
+                        - OBSERVATION_SPACE_SHAPE (list[int]) - unused here, can be arbitrary, e.g. to [100, 100, 100, 11].
+                    - LOCAL_POLICY (CfgNode) - config of the local policy. Must include
+                        - DISTANCE_THRESHOLD (float) - this means that the position is accepted
+                    - ACTION_PIPELINE (CfgNode) - config of the action pipeline. Must include
+                        - IS_DETERMINISTIC (bool) - whether the action pipeline is deterministic or not.
+                        - GLOBAL_POLICY_POLLING_FREQUENCY (int) - how often the global policy is polled.
             wandb_logger (CfgNode): optional argument that can be passed to log the semantic maps to wandb.
         """
-        self._data_generator_cfg = data_generator_cfg
-        self._data_paths_cfg = data_paths_cfg
-        self._sim_cfg = sim_cfg
-        self._map_builder_cfg = map_builder_cfg
-        self._map_processor_cfg = map_processor_cfg
-        self._action_module_cfg = action_module_cfg
+        self._perception_cfg = perception_cfg
         self._wandb_logger = wandb_logger
     
     def __call__(self, model: ModelWrapper, epoch: int) -> None:
@@ -104,24 +98,39 @@ class DataGenerator:
             scene_id (str): the scene id to process.
             epoch (int): the current epoch.
         """
-        data_paths = GenerateEpochTrajectoryFilepaths(self._data_paths_cfg, 
-                                                self._data_generator_cfg.SPLIT,
+        data_paths = GenerateEpochTrajectoryFilepaths(self._perception_cfg.DATA_PATHS, 
+                                                self._perception_cfg.DATA_GENERATOR.SPLIT,
                                                 scene_id, epoch)
 
         map_builder, poses = self._step_through_trajectory(model, data_paths)
         semantic_map = map_builder.semantic_map
         grid_index_of_origin = map_builder.get_grid_index_of_origin()
         
-        label_generator = LabelGenerator(semantic_map, grid_index_of_origin, self._map_builder_cfg, 
-                                            self._map_processor_cfg, self._sim_cfg.SENSOR_CFG)
+        label_generator = LabelGenerator(semantic_map, grid_index_of_origin, self._perception_cfg.MAP_BUILDER, 
+                                            self._perception_cfg.MAP_PROCESSOR, self._perception_cfg.SIM.SENSOR_CFG)
         self._save_categorical_label_map_to_wandb(label_generator, map_builder, scene_id, epoch)
-        print("Generating labels...")
-        for t, pose in tqdm(enumerate(poses), total = len(poses)):
-            label_dict = label_generator.get_label_dict(pose)
-            with open((data_paths.label_dict_dir / str(t)).with_suffix('.pickle'), 'wb') as fp:
-                cPickle.dump(label_dict, fp)
-        print("Labels generated!")
+        self._generate_labels(poses, label_generator, data_paths)
 
+    @staticmethod
+    def _save_label_dict_from_pose(args):
+        pose, t, label_generator, data_paths = args
+        label_dict = label_generator.get_label_dict(pose)
+        with open((data_paths.label_dict_dir / str(t)).with_suffix('.pickle'), 'wb') as fp:
+            cPickle.dump(label_dict, fp)
+        print(f"Saved label dict for step {t}.   ", end = '\r')
+
+    def _generate_labels(self, poses, label_generator, data_paths):
+        start_time = datetime.now()
+        print(f"Starting generating labels at time {start_time.strftime('%H:%M:%S')}")
+        with ThreadPoolExecutor() as executor:
+            # Create an iterable of arguments for your save function
+            args = [(pose, t, label_generator, data_paths) for t, pose in enumerate(poses)]
+
+            executor.map(self._save_label_dict_from_pose, args)
+        # Print finish time and number of seconds it took
+        print(f"Finished generating labels at time {datetime.now().strftime('%H:%M:%S')}, "
+              f"it took {datetime.now() - start_time} seconds.")
+        
     def _step_through_trajectory(self, model: ModelWrapper, data_paths: GenerateEpochTrajectoryFilepaths
                                  ) -> Tuple[SemanticMap3DBuilder, List[Pose]]:
         """ This steps through a scene, saving RGBD data and poses, and returns the built semantic map.
@@ -134,13 +143,13 @@ class DataGenerator:
                 grid_index_of_origin for label_building, and the poses.
         """
 
-        map_builder = SemanticMap3DBuilder(self._map_builder_cfg, self._sim_cfg)
+        map_builder = SemanticMap3DBuilder(self._perception_cfg.MAP_BUILDER, self._perception_cfg.SIM)
         poses: List = []
         sim, action_pipeline = self._initialize_sim_and_action(data_paths)
         use_semantic_sensor = scene.check_if_semantic_sensor_used(sim)
         self._make_dirs(data_paths, use_semantic_sensor)
 
-        for count in trange(self._data_generator_cfg.NUM_STEPS):
+        for count in trange(self._perception_cfg.DATA_GENERATOR.NUM_STEPS):
             action = action_pipeline(None)  # type: ignore[arg-type]
             # This means we are withing the threshold
             while not action:
@@ -169,10 +178,11 @@ class DataGenerator:
         Returns:
             List[PurePath]: _description_
         """
-        raw_split_path = filepath.get_raw_data_split_dir(self._data_paths_cfg, self._data_generator_cfg.SPLIT)
+        raw_split_path = filepath.get_raw_data_split_dir(self._perception_cfg.DATA_PATHS, 
+                                                         self._perception_cfg.DATA_GENERATOR.SPLIT)
         scene_ids = list(sorted([f.name for f in os.scandir(raw_split_path) if f.is_dir()]))
-        random.seed(self._data_generator_cfg.SEED)
-        selected_scene_ids = random.sample(scene_ids, self._data_generator_cfg.NUM_SCENES)
+        random.seed(self._perception_cfg.DATA_GENERATOR.SEED)
+        selected_scene_ids = random.sample(scene_ids, self._perception_cfg.DATA_GENERATOR.NUM_SCENES)
         return selected_scene_ids
 
     def _initialize_sim_and_action(
@@ -186,10 +196,12 @@ class DataGenerator:
             Tuple[Simulator, ActionPipeline]: the initialized sim and action_pipeline.
         """
         sim = scene.initialize_sim(
-            data_paths.scene_split, data_paths.scene_id, data_paths_cfg=self._data_paths_cfg, sim_cfg=self._sim_cfg)
+            data_paths.scene_split, data_paths.scene_id, data_paths_cfg=self._perception_cfg.DATA_PATHS, 
+            sim_cfg=self._perception_cfg.SIM)
 
-        agent = sim.get_agent(self._sim_cfg.DEFAULT_AGENT_ID)
-        action_pipeline = create_action_pipeline(self._action_module_cfg, str(data_paths.navmesh_filepath), agent)
+        agent = sim.get_agent(self._perception_cfg.SIM.DEFAULT_AGENT_ID)
+        action_pipeline = create_action_pipeline(self._perception_cfg.ACTION_MODULE, 
+                                                 str(data_paths.navmesh_filepath), agent)
         
         return sim, action_pipeline
     
@@ -247,25 +259,13 @@ class DataGenerator:
         data_paths.label_dict_dir.mkdir(parents=True, exist_ok=True)
 
 def main():
-    from src.model.perception.perception_pipeline_config import (
-        action_module_cfg,
-        data_generator_cfg,
-        data_paths_cfg,
-        map_builder_cfg,
-        map_processor_cfg,
-        model_cfg,
-        sim_cfg,
-    )
-    wandb_logger = WandbPerceptionLogger("Test run")
-    wandb_logger.add_configs(["data_generator_cfg", "data_paths_cfg", "sim_cfg", "map_builder_cfg", "map_processor_cfg",
-                                "action_module_cfg", "model_cfg"],
-                              [data_generator_cfg(), data_paths_cfg(), sim_cfg(), map_builder_cfg(), 
-                              map_processor_cfg(), action_module_cfg(), model_cfg()])
-    
-    data_generator = DataGenerator(data_generator_cfg(), data_paths_cfg(), sim_cfg(), map_builder_cfg(), 
-                                   map_processor_cfg(), action_module_cfg(), wandb_logger)
+    from src.model.perception.perception_pipeline_config import get_perception_cfg
+    perception_cfg = get_perception_cfg()
+    wandb_logger = WandbPerceptionLogger(perception_cfg)
+
+    data_generator = DataGenerator(perception_cfg, wandb_logger)
         
-    model = ModelWrapper(model_cfg())
+    model = ModelWrapper(perception_cfg.MODEL)
     model.cuda()
     model.eval()
     for epoch in range(2):

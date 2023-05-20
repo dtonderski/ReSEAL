@@ -3,6 +3,20 @@ from typing import Optional
 
 from yacs.config import CfgNode
 
+def get_perception_cfg() -> CfgNode:
+    """ Wrapper that includes all necessary configs for perception training.
+    """
+    perception_cfg = CfgNode()
+    perception_cfg.ACTION_MODULE = action_module_cfg()
+    perception_cfg.DATA_GENERATOR = data_generator_cfg()
+    perception_cfg.DATA_PATHS = data_paths_cfg()
+    perception_cfg.MAP_BUILDER = map_builder_cfg()
+    perception_cfg.MAP_PROCESSOR = map_processor_cfg()
+    perception_cfg.MODEL = model_cfg()
+    perception_cfg.SIM = sim_cfg()
+    perception_cfg.TRAINING = training_cfg()
+    
+    return perception_cfg
 
 def data_generator_cfg() -> CfgNode:
     """ All of these parameters are used during perception training. For a description of the parameters, see the 
@@ -10,10 +24,11 @@ def data_generator_cfg() -> CfgNode:
         arguments should be seen as examples.
     """
     data_generator_cfg = CfgNode()
-    data_generator_cfg.NUM_SCENES = 10
+    data_generator_cfg.NUM_SCENES = 3
     data_generator_cfg.NUM_STEPS = 100
     data_generator_cfg.SPLIT = 'train'
     data_generator_cfg.SEED = 0
+    data_generator_cfg.NUM_WORKERS = 4
     return data_generator_cfg
 
 def data_paths_cfg():
