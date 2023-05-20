@@ -30,8 +30,12 @@ To download the data, run:
 conda activate habitat
 sh tools/get_data.sh
 ```
-This will prompt you for your Matterport API token ID and secret API token (the latter will not be shown on screen).
-
+This will prompt you for your Matterport API token ID and secret API token (the latter will not be shown on screen),
+and download the data to the ./data/raw/ directory. If you want to download your data to a non-default directory, run:
+```
+conda activate habitat
+sh tools/get_data.sh [data-path]
+```
 ## Generating trajctories
 To generate trajectories, use the following script:
 ```
