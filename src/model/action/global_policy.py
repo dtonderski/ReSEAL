@@ -4,7 +4,7 @@ import gymnasium as gym
 import habitat_sim
 import torch
 from stable_baselines3.common.distributions import Distribution
-from stable_baselines3.common.policies import ActorCriticCnnPolicy, ActorCriticPolicy
+from stable_baselines3.common import policies
 from stable_baselines3.common.type_aliases import Schedule
 from yacs.config import CfgNode
 
@@ -12,7 +12,7 @@ from .feature_extractor import SemanticMapFeatureExtractor
 from .spaces import create_action_space, create_observation_space
 
 
-class RandomGlobalPolicy(ActorCriticPolicy):
+class RandomGlobalPolicy(policies.ActorCriticPolicy):
     """Global policy that generates random goal coordinates based on given navmash
     Follows the same interface as ActorCriticPolicy of stable-baselines3
     """
@@ -68,7 +68,7 @@ def create_global_policy(
     global_policy_cfg: CfgNode,
     return_kwargs: bool = False,
     **kwargs,
-) -> Union[Dict[str, Any], ActorCriticPolicy]:
+) -> Union[Dict[str, Any], policies.ActorCriticPolicy]:
     """Factory function for creating global policy."""
     observation_space = create_observation_space(global_policy_cfg.MAP_SHAPE)
     action_space = create_action_space()
@@ -84,7 +84,7 @@ def create_global_policy(
             navmesh_filepath=kwargs["navmesh_filepath"],
         )
 
-    if global_policy_cfg.NAME == "CnnPolicy":
+    if global_policy_cfg.NAME == "MultiInputPolicy":
         features_extractor_kwargs = dict(features_dim=256)
         if return_kwargs:
             return dict(
@@ -92,7 +92,7 @@ def create_global_policy(
                 features_extractor_kwargs=features_extractor_kwargs,
             )
         device = torch.device("cuda")
-        return ActorCriticCnnPolicy(
+        return policies.MultiInputActorCriticPolicy(
             observation_space=observation_space,
             action_space=action_space,
             lr_schedule=lr_schedule,
@@ -103,7 +103,7 @@ def create_global_policy(
     if global_policy_cfg.NAME == "LoadTrainedPolicy":
         if return_kwargs:
             raise RuntimeError("LoadTrainedPolicy does not support return_kwargs")
-        return ActorCriticCnnPolicy.load(global_policy_cfg.MODEL_PATH)
+        return policies.MultiInputActorCriticPolicy.load(global_policy_cfg.MODEL_PATH)
 
     raise RuntimeError(f"Unknown global policy: {global_policy_cfg.NAME}")
 

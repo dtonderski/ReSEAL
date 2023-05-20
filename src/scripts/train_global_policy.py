@@ -25,7 +25,7 @@ def main(
         env_cfg.merge_from_file(env_cfg_filepath)
     sim_cfg = cfg.default_sim_cfg()
     action_module_cfg = cfg.default_action_module_cfg()
-    action_module_cfg.GLOBAL_POLICY.NAME = "CnnPolicy"
+    action_module_cfg.GLOBAL_POLICY.NAME = "MultiInputPolicy"
     action_module_cfg.PREPROCESSOR.NAME = "IdentityPreprocessor"
     map_builder_cfg = cfg.default_map_builder_cfg()
     perception_model_cfg = cfg.default_perception_model_cfg()
@@ -87,7 +87,7 @@ def main(
     )
 
     model = PPO(
-        "CnnPolicy",
+        "MultiInputPolicy",
         env,
         policy_kwargs=policy_kwargs,  # type: ignore[arg-type]
         verbose=2,

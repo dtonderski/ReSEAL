@@ -1,9 +1,8 @@
-from typing import Dict, Generator, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import gymnasium as gym
 import habitat_sim
 import numpy as np
-import torch
 from yacs.config import CfgNode
 
 from ...features.mapping import SemanticMap3DBuilder
@@ -56,7 +55,7 @@ class HabitatEnv(gym.Env):
         self._observation_cache = ObservationCache()
         self._reward_base = 0
 
-    def step(self, action) -> Tuple[datatypes.SemanticMap3D, float, bool, bool, Dict]:
+    def step(self, action) -> Tuple[Dict, float, bool, bool, Dict]:
         """Give global_policy action (ie goal coordinates), agent tries to navigate to the goal with the local policy
         for a fixed number of steps (GLOBAL_POLICY_POLLING_FREQUENCY).
         After each step, the agent's observations are updated (ie the map builder's point cloud is updated.
@@ -65,7 +64,7 @@ class HabitatEnv(gym.Env):
         If the number of global steps exceeds MAX_STEPS, the episode is done.
 
         Returns:
-            datatypes.SemanticMap3D: The semantic map at the agent's final pose
+            dict: The semantic map at the agent's final pose and position
             float: The reward
             bool: Whether the episode is done
             bool: truncated (always False)
@@ -85,12 +84,12 @@ class HabitatEnv(gym.Env):
         info = {}  # type: ignore[var-annotated]
         return obs, reward, done, False, info
 
-    def reset(self, seed=None, options=None) -> Tuple[datatypes.SemanticMap3D, Dict]:
+    def reset(self, seed=None, options=None) -> Tuple[Dict, Dict]:
         """Reset the environment. This resets the simulator, map builder, and counter.
         # TODO: Initialize the agent at a random pose
 
         Returns:
-            datatypes.SemanticMap3D: The semantic map at the agent's initial pose
+            dict: The semantic map at the agent's initial pose and current position
             dict: Additional info
         """
         # Reset
@@ -127,7 +126,7 @@ class HabitatEnv(gym.Env):
         pose = (position, rotation)
         self._observation_cache.add(rgb[:, :, :3], depth_map, pose)
 
-    def _get_obs(self) -> datatypes.SemanticMap3D:
+    def _get_obs(self) -> Dict:
         """Gets the semantic map at the current agent pose from the map builder"""
         if len(self._observation_cache) > 0:
             rgb_image_stack = self._observation_cache.get_rgb_stack_tensor()
@@ -140,7 +139,10 @@ class HabitatEnv(gym.Env):
         rotation = self._sim.get_agent(0).state.rotation
         pose = (position, rotation)
         semantic_map = self._map_builder.semantic_map_at_pose(pose)
-        return self._preprocessor(semantic_map).numpy(force=True)
+        return {
+            "map": self._preprocessor(semantic_map).numpy(force=True),
+            "position": position,
+        }
 
     def _gainful_curiosity(self) -> float:
         """Reward function, defined as the number of voxels in the semantic map with semantic labels
