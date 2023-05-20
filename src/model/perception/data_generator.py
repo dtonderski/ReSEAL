@@ -35,6 +35,7 @@ class DataGenerator:
                     - NUM_SCENES: int - number of scenes to sample from
                     - NUM_STEPS: int - number of steps to take in each scene
                     - SPLIT: str - one of ['train', 'val', 'minval', 'test']
+                    - SEMANTIC_SCENES_ONLY: bool - whether to only use scenes with semantic maps
                     - SEED: int - specify the random selection of scenes. If None, will use current system time.
                 DATA_PATHS (CfgNode): needs the following:
                     - ANNOTATED_SCENE_CONFIG_PATH_IN_SPLIT: str
@@ -172,13 +173,13 @@ class DataGenerator:
         print("Semantic map updated!")
         return map_builder.semantic_map, map_builder.get_grid_index_of_origin(), poses
 
-    def _sample_scene_ids(self, use_semantic_only = True) -> List[str]:
+    def _sample_scene_ids(self) -> List[str]:
         """ This returns a sample of all available scene_ids for the given split. 
 
         Returns:
             List[PurePath]: _description_
         """
-        if use_semantic_only:
+        if self._perception_cfg.DATA_GENERATOR.SEMANTIC_SCENES_ONLY:
             scene_ids = [x.name for x in scene.get_annotated_scene_set(self._perception_cfg.DATA_PATHS) 
                          if x.parent.name == self._perception_cfg.DATA_GENERATOR.SPLIT]            
         else:

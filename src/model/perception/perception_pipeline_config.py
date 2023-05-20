@@ -29,6 +29,7 @@ def data_generator_cfg() -> CfgNode:
     data_generator_cfg.SPLIT = 'train'
     data_generator_cfg.SEED = 0
     data_generator_cfg.NUM_WORKERS = 4 # currently unused
+    data_generator_cfg.SEMANTIC_SCENES_ONLY = True
     return data_generator_cfg
 
 def data_paths_cfg():
