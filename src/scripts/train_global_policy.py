@@ -43,10 +43,9 @@ def main(scene_name: str = "minival/00800-TEEsavR23oF"):
         env_cfg,
         str(data_paths.navmesh_filepath),
     )
+    action_module_cfg.GLOBAL_POLICY.MAP_SHAPE = map_builder.semantic_map_at_pose_shape
     policy_kwargs = create_global_policy(
         action_module_cfg.GLOBAL_POLICY,
-        observation_space=env.observation_space,
-        action_space=env.action_space,
         return_kwargs=True,
     )
 

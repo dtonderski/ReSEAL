@@ -9,6 +9,7 @@ from stable_baselines3.common.type_aliases import Schedule
 from yacs.config import CfgNode
 
 from .feature_extractor import SemanticMapFeatureExtractor
+from .spaces import create_action_space, create_observation_space
 
 
 class RandomGlobalPolicy(ActorCriticPolicy):
@@ -44,7 +45,9 @@ class RandomGlobalPolicy(ActorCriticPolicy):
             Tuple[Tensor, Tensor, Tensor]: goal coordinates, None, None
         """
         goal_position = self._path_finder.get_random_navigable_point()
-        return torch.Tensor(goal_position), None, None  # type: ignore[return-value]
+        action = torch.Tensor(goal_position)
+        action = action.reshape((-1, *self.action_space.shape))  # type: ignore[misc]
+        return action, None, None  # type: ignore[return-value]
 
     def extract_features(self, obs: torch.Tensor) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:  # type: ignore[override]
         raise RuntimeError("RandomGlobalPolicy does not implement extract_features")
@@ -67,16 +70,20 @@ def create_global_policy(
     **kwargs,
 ) -> Union[Dict[str, Any], ActorCriticPolicy]:
     """Factory function for creating global policy."""
+    observation_space = create_observation_space(global_policy_cfg.MAP_SHAPE)
+    action_space = create_action_space()
     lr_schedule = _create_lr_schedule(global_policy_cfg.LR_SCHEDULE)
+
     if global_policy_cfg.NAME == "RandomGlobalPolicy":
         if return_kwargs:
             raise RuntimeError("RandomGlobalPolicy does not support return_kwargs")
         return RandomGlobalPolicy(
-            observation_space=kwargs["observation_space"],
-            action_space=kwargs["action_space"],
+            observation_space=observation_space,
+            action_space=action_space,
             lr_schedule=lr_schedule,
             navmesh_filepath=kwargs["navmesh_filepath"],
         )
+
     if global_policy_cfg.NAME == "CnnPolicy":
         features_extractor_kwargs = dict(features_dim=256)
         if return_kwargs:
@@ -84,17 +91,20 @@ def create_global_policy(
                 features_extractor_class=SemanticMapFeatureExtractor,
                 features_extractor_kwargs=features_extractor_kwargs,
             )
+        device = torch.device("cuda")
         return ActorCriticCnnPolicy(
-            kwargs["observation_space"],
-            kwargs["action_space"],
-            lr_schedule,
+            observation_space=observation_space,
+            action_space=action_space,
+            lr_schedule=lr_schedule,
             features_extractor_class=SemanticMapFeatureExtractor,
             features_extractor_kwargs=features_extractor_kwargs,
-        )
+        ).to(device)
+
     if global_policy_cfg.NAME == "LoadTrainedPolicy":
         if return_kwargs:
             raise RuntimeError("LoadTrainedPolicy does not support return_kwargs")
         return ActorCriticCnnPolicy.load(global_policy_cfg.MODEL_PATH)
+
     raise RuntimeError(f"Unknown global policy: {global_policy_cfg.NAME}")
 
 
