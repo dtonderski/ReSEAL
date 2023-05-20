@@ -22,5 +22,5 @@ def create_action_space() -> gym.spaces.Space:
         spaces.Space: action space
     """
     return gym.spaces.Box(
-        -1000, 1000, shape=(3,)
+        -50, 50, shape=(3,)
     )  # TODO: The bounds are arbitrary large numbers. Technically this could be determined from the scene.
