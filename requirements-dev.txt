@@ -5,4 +5,3 @@ isort==5.10.1
 mypy==1.1.1
 # required for mypy to work with pillow
 types-Pillow==9.4.0.17
-wandb==0.15.3
