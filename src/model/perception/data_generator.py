@@ -19,7 +19,7 @@ from src.model.action.pipeline import ActionPipeline, create_action_pipeline
 from src.model.perception.labeler import LabelGenerator
 from src.model.perception.model_wrapper import ModelWrapper
 from src.model.perception.wandb_perception_logger import WandbPerceptionLogger
-from src.utils.datatypes import Pose
+from src.utils.datatypes import Pose, SemanticMap3D, GridIndex3D
 
 
 class DataGenerator:
@@ -91,7 +91,7 @@ class DataGenerator:
             print(f"Generating data for scene {scene_id}: {i+1}/{len(scene_ids)}, epoch {epoch}...")
             self._process_scene(model, scene_id, epoch)
 
-    def _process_scene(self, model: ModelWrapper, scene_id: str, epoch: int):
+    def _process_scene(self, model: ModelWrapper, scene_id: str, epoch: int) -> None:
         """ This does steps 2 and 3 from __call__.
 
         Args:
@@ -102,24 +102,24 @@ class DataGenerator:
                                                 self._perception_cfg.DATA_GENERATOR.SPLIT,
                                                 scene_id, epoch)
 
-        map_builder, poses = self._step_through_trajectory(model, data_paths)
-        semantic_map = map_builder.semantic_map
-        grid_index_of_origin = map_builder.get_grid_index_of_origin()
+        semantic_map, grid_index_of_origin, poses = self._step_through_trajectory(model, data_paths)
         
         label_generator = LabelGenerator(semantic_map, grid_index_of_origin, self._perception_cfg.MAP_BUILDER, 
                                             self._perception_cfg.MAP_PROCESSOR, self._perception_cfg.SIM.SENSOR_CFG)
-        self._save_categorical_label_map_to_wandb(label_generator, map_builder, scene_id, epoch)
+        self._save_categorical_label_map_to_wandb(label_generator, grid_index_of_origin, scene_id, epoch)
         self._generate_labels(poses, label_generator, data_paths)
 
     @staticmethod
-    def _save_label_dict_from_pose(args):
+    def _save_label_dict_from_pose(args:Tuple[Pose, int, LabelGenerator, GenerateEpochTrajectoryFilepaths]) -> None:
         pose, t, label_generator, data_paths = args
         label_dict = label_generator.get_label_dict(pose)
         with open((data_paths.label_dict_dir / str(t)).with_suffix('.pickle'), 'wb') as fp:
             cPickle.dump(label_dict, fp)
         print(f"Saved label dict for step {t}.   ", end = '\r')
 
-    def _generate_labels(self, poses, label_generator, data_paths):
+    def _generate_labels(
+        self, poses: List[Pose], label_generator: LabelGenerator, data_paths: GenerateEpochTrajectoryFilepaths
+        ) -> None:
         start_time = datetime.now()
         print(f"Starting generating labels at time {start_time.strftime('%H:%M:%S')}")
         with ThreadPoolExecutor() as executor:
@@ -132,7 +132,7 @@ class DataGenerator:
               f"it took {datetime.now() - start_time} seconds.")
         
     def _step_through_trajectory(self, model: ModelWrapper, data_paths: GenerateEpochTrajectoryFilepaths
-                                 ) -> Tuple[SemanticMap3DBuilder, List[Pose]]:
+                                 ) -> Tuple[SemanticMap3D, GridIndex3D, List[Pose]]:
         """ This steps through a scene, saving RGBD data and poses, and returns the built semantic map.
 
         Args:
@@ -170,17 +170,21 @@ class DataGenerator:
         map_builder.update_semantic_map()
         self._save_map_builder_and_poses(map_builder, poses, data_paths)
         print("Semantic map updated!")
-        return map_builder, poses
+        return map_builder.semantic_map, map_builder.get_grid_index_of_origin(), poses
 
-    def _sample_scene_ids(self) -> List[str]:
+    def _sample_scene_ids(self, use_semantic_only = True) -> List[str]:
         """ This returns a sample of all available scene_ids for the given split. 
 
         Returns:
             List[PurePath]: _description_
         """
-        raw_split_path = filepath.get_raw_data_split_dir(self._perception_cfg.DATA_PATHS, 
-                                                         self._perception_cfg.DATA_GENERATOR.SPLIT)
-        scene_ids = list(sorted([f.name for f in os.scandir(raw_split_path) if f.is_dir()]))
+        if use_semantic_only:
+            scene_ids = [x.name for x in scene.get_annotated_scene_set(self._perception_cfg.DATA_PATHS) 
+                         if x.parent.name == self._perception_cfg.DATA_GENERATOR.SPLIT]            
+        else:
+            raw_split_path = filepath.get_raw_data_split_dir(self._perception_cfg.DATA_PATHS, 
+                                                            self._perception_cfg.DATA_GENERATOR.SPLIT)
+            scene_ids = list(sorted([f.name for f in os.scandir(raw_split_path) if f.is_dir()]))
         random.seed(self._perception_cfg.DATA_GENERATOR.SEED)
         selected_scene_ids = random.sample(scene_ids, self._perception_cfg.DATA_GENERATOR.NUM_SCENES)
         return selected_scene_ids
@@ -232,13 +236,13 @@ class DataGenerator:
         with open(data_paths.poses_filepath, 'wb') as fp:
             cPickle.dump(poses, fp)
     
-    def _save_categorical_label_map_to_wandb(self, label_generator: LabelGenerator, map_builder: SemanticMap3DBuilder,
-                                             scene_id: str, epoch: int):
+    def _save_categorical_label_map_to_wandb(self, label_generator: LabelGenerator, grid_index_of_origin,
+                                             scene_id: str, epoch: int) -> None:
         if self._wandb_logger:
             print(f"Saving semantic map point cloud representation to wandb.")
             self._wandb_logger.log_categorical_label_map(label_generator.categorical_label_map,
-                                                         map_builder.get_grid_index_of_origin(),
-                                                         map_builder._resolution,
+                                                         grid_index_of_origin,
+                                                         self._perception_cfg.MAP_BUILDER.RESOLUTION,
                                                          scene_id,
                                                          epoch)
 
