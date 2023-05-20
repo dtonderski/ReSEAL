@@ -167,10 +167,17 @@ class ModelWrapper():
         if self._mode == 'train':
             return self._maskrcnn(model_input_preprocessed, labels)
 
-        semantic_maps = self._predictions_to_semantic_maps(self._maskrcnn(model_input_preprocessed))
-
         if len(model_input.shape) == 3:
+            semantic_maps = self._predictions_to_semantic_maps(self._maskrcnn(model_input_preprocessed))
             return semantic_maps[0]
+
+        if self._model_config.BATCH_SIZE:
+            batches = torch.split(model_input_preprocessed, self._model_config.BATCH_SIZE)
+            semantic_maps = []
+            for batch in batches:
+                semantic_maps.extend(self._predictions_to_semantic_maps(self._maskrcnn(batch)))
+        else:
+            semantic_maps = self._predictions_to_semantic_maps(self._maskrcnn(model_input_preprocessed))
 
         return semantic_maps
 

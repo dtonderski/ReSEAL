@@ -85,6 +85,7 @@ def default_perception_model_cfg() -> CfgNode:
     perception_model_config.USE_INITIAL_TRANSFORMS = True
     perception_model_config.SCORE_THRESHOLD = 0.5
     perception_model_config.MASK_THRESHOLD = 0.5
+    perception_model_config.BATCH_SIZE = 5
     return perception_model_config
 
 
