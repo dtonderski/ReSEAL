@@ -86,6 +86,7 @@ def default_data_generator_cfg() -> CfgNode:
     data_generator_cfg.NUM_STEPS = 200
     data_generator_cfg.SPLIT = 'train'
     data_generator_cfg.SEED = 0
+    data_generator_cfg.SEMANTIC_SCENES_ONLY = True
     return data_generator_cfg
 
 def default_model_cfg() -> CfgNode:
