@@ -8,7 +8,8 @@
     }
   },
   "mounts": [
-    "source=${localEnv:HOME}/.Xauthority,target=/home/${localEnv:USER}/.Xauthority,type=bind"
+    "source=${localEnv:HOME}/.Xauthority,target=/home/${localEnv:USER}/.Xauthority,type=bind",
+    "source=${localEnv:HOME}/.netrc,target=/home/${localEnv:USER}/.netrc,type=bind"
   ],
   "runArgs": [
     "--gpus=all",
