@@ -1,0 +1,2 @@
+-i https://download.pytorch.org/whl/cu113
+torchvision==0.13.1+cu113
