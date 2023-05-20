@@ -71,16 +71,19 @@ class LabelGenerator:
                         for object_slice in find_objects(instance_map_2d)]
 
         present_instance_indices_mask = (one_hot.sum(axis = (0,1)) > 0)
-
         boxes = np.array([bounding_box for bounding_box in bounding_boxes if bounding_box is not None])
-        labels = instance_labels[present_instance_indices_mask]
-        masks = one_hot[..., present_instance_indices_mask].transpose(2,0,1)
-        # TODO: Sanity check, remove when sane
-        assert boxes.shape[0] == labels.shape[0] == masks.shape[0]
+
+        # There was a bug when the instance map was empty, which is why we are checking for that here.
         if boxes.size == 0:
             boxes = np.zeros((0, 4))
             labels = np.zeros((0,))
             masks = np.zeros((0, self._sensor_cfg.HEIGHT, self._sensor_cfg.WIDTH))
+        else:
+            labels = instance_labels[present_instance_indices_mask]
+            masks = one_hot[..., present_instance_indices_mask].transpose(2,0,1)
+        # TODO: Sanity check, remove when sane
+        assert boxes.shape[0] == labels.shape[0] == masks.shape[0]
+
         return {"boxes": torch.tensor(boxes).float(),
                 "labels": torch.tensor(labels).type(torch.int64),
                 "masks": torch.tensor(masks).type(torch.uint8)}

@@ -35,6 +35,8 @@ def default_data_paths_cfg() -> CfgNode:
     data_paths_cfg.MATTERPORT_TO_RESEAL_MAPPING_PATH = str(Path(data_paths_cfg.RAW_DATA_DIR, "mpcat40_to_reseal.tsv"))
     data_paths_cfg.RESEAL_MAPPING_PATH = str(Path(data_paths_cfg.RAW_DATA_DIR, "reseal.tsv"))
     data_paths_cfg.MASKRCNN_TO_RESEAL_MAPPING_PATH = str(Path(data_paths_cfg.RAW_DATA_DIR, "maskrcnn_to_reseal.tsv"))
+    
+    data_paths_cfg.MODEL_DIR = str(Path("models"))
     return data_paths_cfg
 
 
@@ -78,10 +80,10 @@ def default_action_module_cfg() -> CfgNode:
     action_module_cfg.ACTION_PIPELINE.GLOBAL_POLICY_POLLING_FREQUENCY = 10
     return action_module_cfg
 
-def default_perception_data_generator_cfg() -> CfgNode:
+def default_data_generator_cfg() -> CfgNode:
     data_generator_cfg = CfgNode()
-    data_generator_cfg.NUM_SCENES = 1
-    data_generator_cfg.NUM_STEPS = 100
+    data_generator_cfg.NUM_SCENES = 10
+    data_generator_cfg.NUM_STEPS = 200
     data_generator_cfg.SPLIT = 'train'
     data_generator_cfg.SEED = 0
     return data_generator_cfg
@@ -92,46 +94,17 @@ def default_model_cfg() -> CfgNode:
     model_config.SCORE_THRESHOLD = 0.5
     model_config.MASK_THRESHOLD = 0.5
     return model_config
-    
-def train_maskrcnn_cfg() -> CfgNode:
-    mask_cfg = CfgNode()
-    mask_cfg.NUM_EPOCHS = 2
-    mask_cfg.NUM_CLASSES = 6
-    mask_cfg.BATCH_SIZE = 4
-    mask_cfg.SHUFFLE = False
-    mask_cfg.NUM_WORKERS = 4
-    mask_cfg.LEARNING_RATE = 0.005
-    mask_cfg.OPTIM_MOMENTUM = 0.9
-    mask_cfg.OPTIM_WEIGHT_DECAY = 0.0005
-    mask_cfg.OPTIM_STEP_SIZE = 3
-    mask_cfg.OPTIM_GAMMA = 0.1    
-    return mask_cfg
 
-def train_map_builder_cfg() -> CfgNode:
-    map_builder_cfg = CfgNode()
-    map_builder_cfg.RESOLUTION = 0.05  # m per pixel
-    map_builder_cfg.MAP_SIZE = (25, 1.5, 25)  # (x, y, z) in m
-    map_builder_cfg.NUM_SEMANTIC_CLASSES = 6
-    return map_builder_cfg
-
-def perception_training_action_module_cfg() -> CfgNode:
-    action_module_cfg = CfgNode()
-    # Config for semantic map preprocessor
-    action_module_cfg.PREPROCESSOR = CfgNode()
-    action_module_cfg.PREPROCESSOR.NAME = "DummyPreprocessor"
-    # Config for global policy
-    action_module_cfg.GLOBAL_POLICY = CfgNode()
-    action_module_cfg.GLOBAL_POLICY.NAME = "RandomGlobalPolicy"
-    action_module_cfg.GLOBAL_POLICY.OBSERVATION_SPACE_SHAPE = [1,1,1,1] # Shape of semantic map patch
-    # Config for global policy LR schedule
-    action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE = CfgNode()
-    action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE.NAME = "ConstantLR"
-    action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE.INIT_LR = 0.0001
-    # Config for local policy
-    action_module_cfg.LOCAL_POLICY = CfgNode()
-    action_module_cfg.LOCAL_POLICY.DISTANCE_THRESHOLD = 0.1 #m
-    # Config for inference
-    action_module_cfg.ACTION_PIPELINE = CfgNode()
-    action_module_cfg.ACTION_PIPELINE.IS_DETERMINISTIC = True
-    action_module_cfg.ACTION_PIPELINE.GLOBAL_POLICY_POLLING_FREQUENCY = 50
-    return action_module_cfg
+def default_train_cfg() -> CfgNode:
+    train_cfg = CfgNode()
+    train_cfg.NUM_EPOCHS = 50
+    train_cfg.NUM_CLASSES = 6
+    train_cfg.BATCH_SIZE = 4
+    train_cfg.SHUFFLE = True
+    train_cfg.NUM_WORKERS = 4
+    train_cfg.LEARNING_RATE = 0.005
+    train_cfg.OPTIM_MOMENTUM = 0.9
+    train_cfg.OPTIM_WEIGHT_DECAY = 0.0005
+    train_cfg.OPTIM_STEP_SIZE = 3
+    train_cfg.OPTIM_GAMMA = 0.1    
+    return train_cfg

@@ -1,4 +1,4 @@
-from typing import Mapping, Tuple
+from typing import Mapping, Tuple, Union
 
 import numpy as np
 import quaternion  # pylint: disable=unused-import
@@ -21,7 +21,7 @@ Coordinate3D = Tuple[float, float, float]
 CoordinatesMapping2Dto3D = Mapping[Coordinate2D, Coordinate3D]
 CoordinatesMapping3Dto3D = Mapping[Coordinate3D, Coordinate3D]
 GridIndex2D = Tuple[int, int]
-GridIndex3D = Tuple[int, int, int]
+GridIndex3D = Union[Tuple[int, int, int], NDArray[Shape["3"], Int]]
 SemanticLabel = NDArray[Shape["NumSemanticClasses"], Float]  # type: ignore[name-defined]
 
 SemanticMap2D = NDArray[Shape["Height, Width, NumChannels"], Float]

@@ -1,4 +1,4 @@
-from pathlib import PurePath
+from pathlib import PurePath, Path
 from typing import List, Optional, Union
 
 import numpy as np
@@ -90,6 +90,10 @@ class ModelWrapper():
             self._maskrcnn = maskrcnn_resnet50_fpn(**kwargs)
         else:
             raise ValueError(f"Unknown weights type: {type(weights)}")
+
+    def save(self, path: Path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(self._maskrcnn.state_dict(), path)
 
     def _update_mode(self, mode):
         if mode == 'train':

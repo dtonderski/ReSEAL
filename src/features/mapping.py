@@ -56,6 +56,26 @@ class SemanticMap3DBuilder:
         Note: The order corresponds to the order from `point_cloud_coordinates`
         """
         return self._master_point_cloud_semantic_labels
+    
+    @property
+    def categorical_point_cloud_semantic_labels(self) -> NDArray[Shape["NumPoints"], Int]: # type: ignore[name-defined]
+        """NDArray[Shape["NumPoints"], Int]: Semantic label of each point in the point cloud. Used for wandb logging.
+
+        Note: The order corresponds to the order from `point_cloud_coordinates`.
+        """
+        return np.argmax(self.point_cloud_semantic_labels, axis=-1) + (np.sum(
+            self.point_cloud_semantic_labels, axis=-1
+        ) > 0).astype(int)
+
+    @property
+    def point_cloud_with_categorical_data(self) -> NDArray[Shape["NumPoints, 4"], Float]:
+        """NDArray[Shape["NumPoints", 4], Float]: Point cloud with semantic labels as categorical data. Used for WandB.
+        
+        Note: The order corresponds to the order from `point_cloud_coordinates`.
+        """
+        return np.concatenate(
+            [self.point_cloud, self.categorical_point_cloud_semantic_labels[..., np.newaxis]], axis=-1
+        )
 
     @property
     def semantic_map_3d_map_shape(self) -> Tuple[int, int, int, int]:
@@ -72,6 +92,10 @@ class SemanticMap3DBuilder:
         if self._semantic_map is None:
             raise ValueError("Trying to access semantic map before it is calculated!")
         return self._semantic_map
+    
+    @property
+    def resolution(self) -> float:
+        return self._resolution
 
     def semantic_map_at_pose(self, pose: datatypes.Pose) -> datatypes.SemanticMap3D:
         """Calculates the voxel semantic map at a given pose.

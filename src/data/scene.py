@@ -1,5 +1,8 @@
+import contextlib
 import json
+import os
 from pathlib import Path
+import sys
 from typing import Tuple
 
 import habitat_sim
@@ -9,7 +12,8 @@ from yacs.config import CfgNode
 from ..config import default_data_paths_cfg, default_sim_cfg, default_sensor_cfg
 
 def initialize_sim(
-    scene_split: str, scene_id: str, data_paths_cfg: CfgNode = None, sim_cfg: CfgNode = None, verbose: bool = False
+    scene_split: str, scene_id: str, data_paths_cfg: CfgNode = None, sim_cfg: CfgNode = None, verbose: bool = False,
+    silence: bool = True
 ) -> habitat_sim.Simulator:
     """ Initialize the simulator from a given scene
 
@@ -29,6 +33,9 @@ def initialize_sim(
         sim_cfg = default_sim_cfg()
 
     habitat_sim_cfg = make_habitat_sim_cfg(scene_split, scene_id, data_paths_cfg, sim_cfg)
+    if silence:
+        os.environ["MAGNUM_LOG"] = "quiet"
+        os.environ["HABITAT_SIM_LOG"] = "quiet"
     sim = habitat_sim.Simulator(habitat_sim_cfg)
 
     # Set agent state

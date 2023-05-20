@@ -1,39 +1,29 @@
 import os
 import random
-from pathlib import Path, PurePath
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import _pickle as cPickle
 import numpy as np
-import quaternion
 from habitat_sim import Simulator
 from habitat_sim.simulator import ObservationDict
 from PIL import Image
-from tqdm import trange, tqdm
+from tqdm import tqdm, trange
 from yacs.config import CfgNode
 
-from src.config import (
-    perception_training_action_module_cfg,
-    default_data_paths_cfg,
-    default_map_builder_cfg,
-    default_map_processor_cfg,
-    default_perception_data_generator_cfg,
-    default_sim_cfg,
-    default_model_cfg
-)
-from src.visualisation import instance_map_visualization
-from src.data.filepath import GenerateEpochTrajectoryFilepaths
 from src.data import filepath, scene
+from src.data.filepath import GenerateEpochTrajectoryFilepaths
 from src.features.mapping import SemanticMap3DBuilder
 from src.model.action.pipeline import ActionPipeline, create_action_pipeline
 from src.model.perception.labeler import LabelGenerator
-from src.utils.datatypes import Pose, SemanticMap3D, GridIndex3D
 from src.model.perception.model_wrapper import ModelWrapper
+from src.model.perception.wandb_perception_logger import WandbPerceptionLogger
+from src.utils.datatypes import Pose
 
 
 class DataGenerator:
     def __init__(self, data_generator_cfg: CfgNode, data_paths_cfg: CfgNode, sim_cfg: CfgNode, 
-                 map_builder_cfg: CfgNode, map_processor_cfg: CfgNode, action_module_cfg: CfgNode) -> None:
+                 map_builder_cfg: CfgNode, map_processor_cfg: CfgNode, action_module_cfg: CfgNode,
+                 wandb_logger: Optional[WandbPerceptionLogger] = None) -> None:
         """ This class is responsible for generating the training data for the perception module. It uses the action \
             module to generate the trajectories and the semantic map builder to generate the semantic maps. The data \
             saved is the RGBD data, the semantic data if available (this is only used for benchmarking), and the \
@@ -46,6 +36,7 @@ class DataGenerator:
                 - SPLIT: str - one of ['train', 'val', 'minval', 'test']
                 - SEED: int - specify the random selection of scenes. If None, will use current system time.
             data_paths_cfg (CfgNode): needs the following:
+                - ANNOTATED_SCENE_CONFIG_PATH_IN_SPLIT: str
                 - TRAJECTORIES_DIR: str
                 - RAW_DATA_DIR: str
             sim_cfg (CfgNode): needs the following:
@@ -79,8 +70,7 @@ class DataGenerator:
                 - ACTION_PIPELINE (CfgNode) - config of the action pipeline. Must include
                     - IS_DETERMINISTIC (bool) - whether the action pipeline is deterministic or not.
                     - GLOBAL_POLICY_POLLING_FREQUENCY (int) - how often the global policy is polled.
-
-
+            wandb_logger (CfgNode): optional argument that can be passed to log the semantic maps to wandb.
         """
         self._data_generator_cfg = data_generator_cfg
         self._data_paths_cfg = data_paths_cfg
@@ -88,8 +78,9 @@ class DataGenerator:
         self._map_builder_cfg = map_builder_cfg
         self._map_processor_cfg = map_processor_cfg
         self._action_module_cfg = action_module_cfg
+        self._wandb_logger = wandb_logger
     
-    def __call__(self, model: ModelWrapper, epoch_number: int, visualize_instance_map = False) -> None:
+    def __call__(self, model: ModelWrapper, epoch: int) -> None:
         """ This does the following:
             1. Sample scene ids from the split given in data_generator_cfg,
             2. Step through them using the action policy defined in action_module_cfg, saving the RGBD data and \
@@ -100,36 +91,37 @@ class DataGenerator:
             epoch_number (int): the epoch number, used for saving the data.
         """
         scene_ids = self._sample_scene_ids()
+        if self._wandb_logger:
+            self._wandb_logger.log_scene_ids(scene_ids, epoch)
         for i, scene_id in enumerate(scene_ids):
-            print(f"Generating data for scene {scene_id}: {i+1}/{len(scene_ids)}.")
-            data_paths = GenerateEpochTrajectoryFilepaths(self._data_paths_cfg, 
-                                                          self._data_generator_cfg.SPLIT,
-                                                          scene_id, epoch_number)            
-            
-            map_builder, poses = self._step_through_trajectory(model, data_paths)
-            semantic_map = map_builder.semantic_map
-            grid_index_of_origin = map_builder.get_grid_index_of_origin()
-            
-            label_generator = LabelGenerator(semantic_map, grid_index_of_origin, self._map_builder_cfg, 
-                                             self._map_processor_cfg, self._sim_cfg.SENSOR_CFG)
-            for t, pose in tqdm(enumerate(poses)):
-                label_dict = label_generator.get_label_dict(pose)
-                with open((data_paths.label_dict_dir / str(t)).with_suffix('.pickle'), 'wb') as fp:
-                    cPickle.dump(label_dict, fp)
+            print(f"Generating data for scene {scene_id}: {i+1}/{len(scene_ids)}, epoch {epoch}...")
+            self._process_scene(model, scene_id, epoch)
 
+    def _process_scene(self, model: ModelWrapper, scene_id: str, epoch: int):
+        """ This does steps 2 and 3 from __call__.
 
-    def _sample_scene_ids(self) -> List[str]:
-        """ This returns a sample of all available scene_ids for the given split. 
-
-        Returns:
-            List[PurePath]: _description_
+        Args:
+            scene_id (str): the scene id to process.
+            epoch (int): the current epoch.
         """
-        raw_split_path = filepath.get_raw_data_split_dir(self._data_paths_cfg, self._data_generator_cfg.SPLIT)
-        scene_ids = list(sorted([f.name for f in os.scandir(raw_split_path) if f.is_dir()]))
-        random.seed(self._data_generator_cfg.SEED)
-        selected_scene_ids = random.sample(scene_ids, self._data_generator_cfg.NUM_SCENES)
-        return selected_scene_ids
-    
+        data_paths = GenerateEpochTrajectoryFilepaths(self._data_paths_cfg, 
+                                                self._data_generator_cfg.SPLIT,
+                                                scene_id, epoch)
+
+        map_builder, poses = self._step_through_trajectory(model, data_paths)
+        semantic_map = map_builder.semantic_map
+        grid_index_of_origin = map_builder.get_grid_index_of_origin()
+        
+        label_generator = LabelGenerator(semantic_map, grid_index_of_origin, self._map_builder_cfg, 
+                                            self._map_processor_cfg, self._sim_cfg.SENSOR_CFG)
+        self._save_categorical_label_map_to_wandb(label_generator, map_builder, scene_id, epoch)
+        print("Generating labels...")
+        for t, pose in tqdm(enumerate(poses), total = len(poses)):
+            label_dict = label_generator.get_label_dict(pose)
+            with open((data_paths.label_dict_dir / str(t)).with_suffix('.pickle'), 'wb') as fp:
+                cPickle.dump(label_dict, fp)
+        print("Labels generated!")
+
     def _step_through_trajectory(self, model: ModelWrapper, data_paths: GenerateEpochTrajectoryFilepaths
                                  ) -> Tuple[SemanticMap3DBuilder, List[Pose]]:
         """ This steps through a scene, saving RGBD data and poses, and returns the built semantic map.
@@ -144,13 +136,11 @@ class DataGenerator:
 
         map_builder = SemanticMap3DBuilder(self._map_builder_cfg, self._sim_cfg)
         poses: List = []
-        
         sim, action_pipeline = self._initialize_sim_and_action(data_paths)
         use_semantic_sensor = scene.check_if_semantic_sensor_used(sim)
         self._make_dirs(data_paths, use_semantic_sensor)
 
         for count in trange(self._data_generator_cfg.NUM_STEPS):
-            print(f"Step {count}/{self._data_generator_cfg.NUM_STEPS}.")
             action = action_pipeline(None)  # type: ignore[arg-type]
             # This means we are withing the threshold
             while not action:
@@ -160,19 +150,30 @@ class DataGenerator:
             rgb = observations["color_sensor"]  # pylint: disable=unsubscriptable-object
             depth = observations["depth_sensor"]  # pylint: disable=unsubscriptable-object
             semantics = observations["semantic_sensor"] if use_semantic_sensor else None
-            self._save_observations_and_poses(count, rgb, depth, semantics, poses, data_paths)
+            self._save_observations_and_poses(count, rgb, depth, semantics, data_paths)
             pose = (sim.get_agent(0).state.position, sim.get_agent(0).state.rotation)
 
             poses.append(pose)
             
             map = model(rgb[..., :3])
-            map_builder.update_point_cloud(map, depth, pose)
-        
-        print("Updating semantic map...")
+            map_builder.update_point_cloud(map, depth, pose) # type: ignore[arg-type]
+        print("Data generated! Updating semantic map...")
         map_builder.update_semantic_map()
         self._save_map_builder_and_poses(map_builder, poses, data_paths)
         print("Semantic map updated!")
         return map_builder, poses
+
+    def _sample_scene_ids(self) -> List[str]:
+        """ This returns a sample of all available scene_ids for the given split. 
+
+        Returns:
+            List[PurePath]: _description_
+        """
+        raw_split_path = filepath.get_raw_data_split_dir(self._data_paths_cfg, self._data_generator_cfg.SPLIT)
+        scene_ids = list(sorted([f.name for f in os.scandir(raw_split_path) if f.is_dir()]))
+        random.seed(self._data_generator_cfg.SEED)
+        selected_scene_ids = random.sample(scene_ids, self._data_generator_cfg.NUM_SCENES)
+        return selected_scene_ids
 
     def _initialize_sim_and_action(
         self, data_paths: GenerateEpochTrajectoryFilepaths) -> Tuple[Simulator, ActionPipeline]:
@@ -193,8 +194,7 @@ class DataGenerator:
         return sim, action_pipeline
     
     def _save_observations_and_poses(
-        self, count: int, rgb, depth, semantics, poses: List[Pose], 
-        data_paths: GenerateEpochTrajectoryFilepaths) -> None:
+        self, count: int, rgb, depth, semantics, data_paths: GenerateEpochTrajectoryFilepaths) -> None:
         """ Saves the observations according to the data_paths.
 
         Args:
@@ -206,7 +206,7 @@ class DataGenerator:
         """
         Image.fromarray(rgb[:, :, :3]).save(data_paths.rgb_dir / f"{count}.png")
         np.save(data_paths.depth_dir / f"{count}", depth)
-        if semantics:
+        if semantics is not None:
             np.save(data_paths.semantic_dir / f"{count}", semantics)                       
     
     def _save_map_builder_and_poses(
@@ -219,6 +219,17 @@ class DataGenerator:
             cPickle.dump(map_builder, fp)
         with open(data_paths.poses_filepath, 'wb') as fp:
             cPickle.dump(poses, fp)
+    
+    def _save_categorical_label_map_to_wandb(self, label_generator: LabelGenerator, map_builder: SemanticMap3DBuilder,
+                                             scene_id: str, epoch: int):
+        if self._wandb_logger:
+            print(f"Saving semantic map point cloud representation to wandb.")
+            self._wandb_logger.log_categorical_label_map(label_generator.categorical_label_map,
+                                                         map_builder.get_grid_index_of_origin(),
+                                                         map_builder._resolution,
+                                                         scene_id,
+                                                         epoch)
+
     
     def _make_dirs(self, data_paths: GenerateEpochTrajectoryFilepaths, use_semantic_sensor: bool) -> None:
         """ Initializes the directories for saving the data.
@@ -235,12 +246,31 @@ class DataGenerator:
             data_paths.semantic_dir.mkdir(parents=True, exist_ok=True)
         data_paths.label_dict_dir.mkdir(parents=True, exist_ok=True)
 
-
-if __name__ == '__main__':    
-    data_generator = DataGenerator(default_perception_data_generator_cfg(), default_data_paths_cfg(), 
-                                   default_sim_cfg(), default_map_builder_cfg(), default_map_processor_cfg(), 
-                                   perception_training_action_module_cfg())
-    model = ModelWrapper(default_model_cfg())
+def main():
+    from src.model.perception.perception_pipeline_config import (
+        action_module_cfg,
+        data_generator_cfg,
+        data_paths_cfg,
+        map_builder_cfg,
+        map_processor_cfg,
+        model_cfg,
+        sim_cfg,
+    )
+    wandb_logger = WandbPerceptionLogger("Test run")
+    wandb_logger.add_configs(["data_generator_cfg", "data_paths_cfg", "sim_cfg", "map_builder_cfg", "map_processor_cfg",
+                                "action_module_cfg", "model_cfg"],
+                              [data_generator_cfg(), data_paths_cfg(), sim_cfg(), map_builder_cfg(), 
+                              map_processor_cfg(), action_module_cfg(), model_cfg()])
+    
+    data_generator = DataGenerator(data_generator_cfg(), data_paths_cfg(), sim_cfg(), map_builder_cfg(), 
+                                   map_processor_cfg(), action_module_cfg(), wandb_logger)
+        
+    model = ModelWrapper(model_cfg())
     model.cuda()
     model.eval()
-    data_generator(model, 0)
+    for epoch in range(2):
+        data_generator(model, epoch)
+        wandb_logger.on_epoch_end(epoch)
+
+if __name__ == '__main__':
+    main()
