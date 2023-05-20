@@ -39,6 +39,10 @@ class ObservationCache:
         self._depth = []
         self._poses = []
 
+    def __len__(self) -> int:
+        """Return the number of observations in the cache"""
+        return len(self._rgb)
+
     def add(self, rgb: datatypes.RGBImage, depth: datatypes.DepthMap, pose: datatypes.Pose) -> None:
         """Add an observation to the cache. The cache is FIFO
 

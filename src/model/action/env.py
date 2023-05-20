@@ -73,8 +73,9 @@ class HabitatEnv(gym.Env):
         """
         for _ in range(self._cfg.GLOBAL_POLICY_POLLING_FREQUENCY):
             agent_action = self._local_policy(action)
-            if agent_action:
-                _ = self._sim.step(agent_action)
+            if not agent_action:
+                break
+            _ = self._sim.step(agent_action)
             self._update_obs()
         self._counter += 1
         obs = self._get_obs()
@@ -128,10 +129,11 @@ class HabitatEnv(gym.Env):
 
     def _get_obs(self) -> datatypes.SemanticMap3D:
         """Gets the semantic map at the current agent pose from the map builder"""
-        rgb_image_stack = self._observation_cache.get_rgb_stack_tensor()
-        semantic_map_stack = self._perception_model(rgb_image_stack)
-        for semantic_map, (_, depth, pose) in zip(semantic_map_stack, self._observation_cache.get()):
-            self._map_builder.update_point_cloud(semantic_map, depth, pose)
+        if len(self._observation_cache) > 0:
+            rgb_image_stack = self._observation_cache.get_rgb_stack_tensor()
+            semantic_map_stack = self._perception_model(rgb_image_stack)
+            for semantic_map, (_, depth, pose) in zip(semantic_map_stack, self._observation_cache.get()):
+                self._map_builder.update_point_cloud(semantic_map, depth, pose)
         self._observation_cache.clear()
         self._map_builder.update_semantic_map()
         position = self._sim.get_agent(0).state.position

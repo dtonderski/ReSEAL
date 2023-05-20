@@ -48,6 +48,11 @@ def main(
         "num_epochs": training_cfg.NUM_EPOCHS,
         "batch_size": training_cfg.BATCH_SIZE,
         "model_path": training_cfg.MODEL_PATH,
+        "learning_rate": training_cfg.LEARNING_RATE,
+        "discount_factor": training_cfg.DISCOUNT_FACTOR,
+        "entropy_coefficient": training_cfg.ENTROPY_COEFFICIENT,
+        "value_loss_coefficient": training_cfg.VALUE_LOSS_COEFFICIENT,
+        "global_policy_polling_frequency": env_cfg.GLOBAL_POLICY_POLLING_FREQUENCY,
     }
     run = wandb.init(
         project="reseal",
@@ -88,11 +93,15 @@ def main(
         verbose=2,
         n_epochs=training_cfg.NUM_EPOCHS,
         n_steps=training_cfg.NUM_STEPS_PER_EPISODE,
+        gamma=training_cfg.DISCOUNT_FACTOR,
+        learning_rate=training_cfg.LEARNING_RATE,
+        ent_coef=training_cfg.ENTROPY_COEFFICIENT,
+        vf_coef=training_cfg.VALUE_LOSS_COEFFICIENT,
         device="cuda",
-        tensorboard_log="runs/{run.id}",
+        tensorboard_log=f"runs/{run.id}",  # type: ignore[union-attr]
     )
     model.learn(
-        total_timesteps=config["total_timesteps"],  # type: ignore[arg-type]
+        total_timesteps=training_cfg.NUM_TOTAL_STEPS,  # type: ignore[arg-type]
         callback=WandbCallback(
             model_save_path=training_cfg.MODEL_PATH,
             model_save_freq=1000,

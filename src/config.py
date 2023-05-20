@@ -104,4 +104,8 @@ def default_action_training_cfg() -> CfgNode:
     action_training_cfg.NUM_STEPS_PER_EPISODE = 100
     action_training_cfg.NUM_TOTAL_STEPS = 10000
     action_training_cfg.MODEL_PATH = ""
+    action_training_cfg.LEARNING_RATE = 0.0001
+    action_training_cfg.DISCOUNT_FACTOR = 0.99
+    action_training_cfg.ENTROPY_COEFFICIENT = 0.01
+    action_training_cfg.VALUE_LOSS_COEFFICIENT = 0.5
     return action_training_cfg
