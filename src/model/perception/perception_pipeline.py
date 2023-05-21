@@ -70,10 +70,8 @@ def load_kwargs_to_config(kwargs, config: CfgNode) -> CfgNode:
 def train_perception_model_with_action_policy(**kwargs) -> None:
     perception_cfg = get_perception_cfg()
     perception_cfg = load_kwargs_to_config(kwargs, perception_cfg)
-    print(WandbPerceptionLogger._get_run_name(perception_cfg))
     wandb_logger = WandbPerceptionLogger(perception_cfg)
     wandb_logger.add_unusual_config(kwargs)
-    print(wandb_logger.config["unusual"])
     
     num_epochs = perception_cfg.TRAINING.NUM_EPOCHS
     # initialize perception model
