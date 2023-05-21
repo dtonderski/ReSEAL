@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+from datetime import datetime
 
 from yacs.config import CfgNode
 
@@ -43,7 +44,8 @@ def data_paths_cfg():
         data_paths_cfg.DATA_DIR = str(Path("data"))
     data_paths_cfg.RAW_DATA_DIR = str(Path(data_paths_cfg.DATA_DIR, "raw"))
     data_paths_cfg.INTERIM_DATA_DIR = str(Path(data_paths_cfg.DATA_DIR, "interim"))
-    data_paths_cfg.TRAJECTORIES_DIR = str(Path(data_paths_cfg.INTERIM_DATA_DIR, "trajectories"))
+    data_paths_cfg.TRAJECTORIES_DIR = str(Path(
+        data_paths_cfg.INTERIM_DATA_DIR, "trajectories", datetime.now().strftime("%y-%m-%d,%H:%M:%S")))
     data_paths_cfg.ANNOTATED_SCENE_CONFIG_PATH_IN_SPLIT = str(
         Path("scene_datasets", "hm3d", "hm3d_annotated_basis.scene_dataset_config.json")
     )
