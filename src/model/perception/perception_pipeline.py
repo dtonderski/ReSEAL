@@ -22,7 +22,7 @@ def train_perception_model_for_one_epoch(
     if epoch_number >= 0:
         data_generator = DataGenerator(perception_config, wandb_logger)
         data_generator(model, epoch_number)
-    training_dataset = MaskRCNNDataset(perception_config.DATA_PATHS, perception_config.DATA_GENERATOR.SPLIT, 
+    training_dataset = MaskRCNNDataset(perception_config.DATA_PATHS, perception_config.DATA_GENERATOR.SPLIT,
                                        epoch_number)
 
     training_dataloader = DataLoader(training_dataset,
