@@ -24,8 +24,8 @@ def data_generator_cfg() -> CfgNode:
         arguments should be seen as examples.
     """
     data_generator_cfg = CfgNode()
-    data_generator_cfg.NUM_SCENES = 3
-    data_generator_cfg.NUM_STEPS = 100
+    data_generator_cfg.NUM_SCENES = 10
+    data_generator_cfg.NUM_STEPS = 200
     data_generator_cfg.SPLIT = 'train'
     data_generator_cfg.SEED = 0
     data_generator_cfg.NUM_WORKERS = 4 # currently unused
