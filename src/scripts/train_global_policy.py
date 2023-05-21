@@ -29,10 +29,8 @@ def main(
     action_module_cfg.PREPROCESSOR.NAME = "IdentityPreprocessor"
     map_builder_cfg = cfg.default_map_builder_cfg()
     perception_model_cfg = cfg.default_perception_model_cfg()
-
     data_paths_cfg = cfg.default_data_paths_cfg()
     data_paths = filepath.GenerateTrajectoryFilepaths(data_paths_cfg, scene_name)
-
     training_cfg = cfg.default_action_training_cfg()
     if training_cfg_filepath:
         training_cfg.merge_from_file(training_cfg_filepath)
@@ -83,6 +81,7 @@ def main(
     action_module_cfg.GLOBAL_POLICY.MAP_SHAPE = map_builder.semantic_map_at_pose_shape
     policy_kwargs = create_global_policy(
         action_module_cfg.GLOBAL_POLICY,
+        str(data_paths.navmesh_filepath),
         return_kwargs=True,
     )
 

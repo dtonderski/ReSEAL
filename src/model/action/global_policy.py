@@ -66,12 +66,13 @@ class RandomGlobalPolicy(policies.ActorCriticPolicy):
 
 def create_global_policy(
     global_policy_cfg: CfgNode,
+    navmesh_filepath: str,
     return_kwargs: bool = False,
     **kwargs,
 ) -> Union[Dict[str, Any], policies.ActorCriticPolicy]:
     """Factory function for creating global policy."""
     observation_space = create_observation_space(global_policy_cfg.MAP_SHAPE)
-    action_space = create_action_space()
+    action_space = create_action_space(navmesh_filepath)
     lr_schedule = _create_lr_schedule(global_policy_cfg.LR_SCHEDULE)
 
     if global_policy_cfg.NAME == "RandomGlobalPolicy":
@@ -81,7 +82,7 @@ def create_global_policy(
             observation_space=observation_space,
             action_space=action_space,
             lr_schedule=lr_schedule,
-            navmesh_filepath=kwargs["navmesh_filepath"],
+            navmesh_filepath=navmesh_filepath,
         )
 
     if global_policy_cfg.NAME == "MultiInputPolicy":

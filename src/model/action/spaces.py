@@ -1,6 +1,8 @@
 from typing import Tuple
 
+import habitat_sim
 import gymnasium as gym
+import numpy as np
 
 
 def create_observation_space(map_shape: Tuple[int, int, int, int]) -> gym.spaces.Dict:
@@ -18,12 +20,16 @@ def create_observation_space(map_shape: Tuple[int, int, int, int]) -> gym.spaces
     })
 
 
-def create_action_space() -> gym.spaces.Space:
+def create_action_space(navmesh_filepath: str) -> gym.spaces.Space:
     """Factory function for creating action space of the global policy. I.e. goal coordinates
 
     Returns:
         spaces.Space: action space
     """
-    return gym.spaces.Box(
-        -50, 50, shape=(3,)
-    )  # TODO: The bounds are arbitrary large numbers. Technically this could be determined from the scene.
+    path_finder = habitat_sim.PathFinder()
+    path_finder.load_nav_mesh(navmesh_filepath)
+    min_point, max_point = path_finder.get_bounds()
+    bounds = np.concatenate((min_point, max_point))
+    min_coord = np.min(bounds)
+    max_coord = np.max(bounds)
+    return gym.spaces.Box(min_coord, max_coord, shape=(3,))

@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 import gymnasium as gym
 import habitat_sim
@@ -36,7 +36,7 @@ class HabitatEnv(gym.Env):
         perception_model: ModelWrapper,
         preprocessor: SemanticMapPreprocessor,
         cfg: CfgNode,
-        navmesh_filepath: Optional[str] = None,
+        navmesh_filepath: str,
     ) -> None:
         super().__init__()
         self._sim = sim
@@ -44,13 +44,11 @@ class HabitatEnv(gym.Env):
         self._local_policy = local_policy
         self._perception_model = perception_model
         self._preprocessor = preprocessor
-        self._path_finder = None
-        if navmesh_filepath:
-            self._path_finder = habitat_sim.PathFinder()
-            self._path_finder.load_nav_mesh(navmesh_filepath)
+        self._path_finder = habitat_sim.PathFinder()
+        self._path_finder.load_nav_mesh(navmesh_filepath)
         self._cfg = cfg
         self.observation_space = create_observation_space(self._map_builder.semantic_map_at_pose_shape)
-        self.action_space = create_action_space()
+        self.action_space = create_action_space(navmesh_filepath)
         self._counter = 0
         self._observation_cache = ObservationCache()
         self._reward_base = 0
@@ -78,7 +76,7 @@ class HabitatEnv(gym.Env):
             self._update_obs()
         self._counter += 1
         obs = self._get_obs()
-        reward = self._gainful_curiosity()
+        reward = self._gainful_curiosity() - self._cfg.GLOBAL_POLICY_POLLING_FREQUENCY
         done = self._counter >= self._cfg.MAX_STEPS
         # TODO: Do we need to add info to the env?
         info = {}  # type: ignore[var-annotated]
@@ -99,9 +97,8 @@ class HabitatEnv(gym.Env):
         self._observation_cache.clear()
         self._reward_base = 0
         # Set agent to random pose
-        if self._path_finder:
-            new_position = self._path_finder.get_random_navigable_point()
-            self._sim.get_agent(0).set_state(habitat_sim.agent.AgentState(new_position))
+        new_position = self._path_finder.get_random_navigable_point()
+        self._sim.get_agent(0).set_state(habitat_sim.agent.AgentState(new_position))
         # Get observations
         self._update_obs()
         obs = self._get_obs()
@@ -139,6 +136,7 @@ class HabitatEnv(gym.Env):
         rotation = self._sim.get_agent(0).state.rotation
         pose = (position, rotation)
         semantic_map = self._map_builder.semantic_map_at_pose(pose)
+        position = np.expand_dims(np.array(position), axis=0)
         return {
             "map": self._preprocessor(semantic_map).numpy(force=True),
             "position": position,
