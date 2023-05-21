@@ -36,7 +36,11 @@ def data_paths_cfg():
     """ Here, you might have to modify the DATA_DIR if you have downloaded the data to a different location.
     """
     data_paths_cfg = CfgNode()
-    data_paths_cfg.DATA_DIR = str(Path(os.environ['SCRATCH'], "3dvis", "ReSEAL", "data"))
+    if "SCRATCH" in os.environ:
+        data_paths_cfg.DATA_DIR = str(Path(os.environ['SCRATCH'], "3dvis", "ReSEAL", "data"))
+        print(f"SCRATCH detected - setting DATA_DIR to {data_paths_cfg.DATA_DIR}")
+    else:
+        data_paths_cfg.DATA_DIR = str(Path("data"))
     data_paths_cfg.RAW_DATA_DIR = str(Path(data_paths_cfg.DATA_DIR, "raw"))
     data_paths_cfg.INTERIM_DATA_DIR = str(Path(data_paths_cfg.DATA_DIR, "interim"))
     data_paths_cfg.TRAJECTORIES_DIR = str(Path(data_paths_cfg.INTERIM_DATA_DIR, "trajectories"))
@@ -127,6 +131,7 @@ def model_cfg() -> CfgNode:
     model_cfg.USE_INITIAL_TRANSFORMS = True
     model_cfg.SCORE_THRESHOLD = 0.5
     model_cfg.MASK_THRESHOLD = 0.5
+    model_cfg.TRAINABLE_BACKBONE_LAYERS = 0
     return model_cfg
 
 def training_cfg() -> CfgNode:
