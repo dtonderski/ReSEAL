@@ -123,6 +123,12 @@ def visualize_categorical_label_map_plotly(label_map, grid_index_of_origin, reso
     fig = go.Figure(data=data)
 
     fig.update_layout(
+        scene=dict(
+            aspectmode='data'
+        )
+    )
+
+    fig.update_layout(
         title=f"Scene_id {scene_id}, epoch {epoch}",
         scene_camera=dict(
             up=dict(x=0, y=1, z=0),  # Change the 'up' direction to the y-axis
