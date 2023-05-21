@@ -72,7 +72,7 @@ class ModelWrapper():
                  **kwargs):
         super().__init__()
         self._model_config = model_config
-        self._load_model(weights, **kwargs)
+        self._load_model(weights, trainable_backbone_layers = model_config.TRAINABLE_BACKBONE_LAYERS, **kwargs)
         self._update_mode(mode)
         self._update_device(device)
         self._load_initial_transforms()
