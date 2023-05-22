@@ -1,4 +1,5 @@
 from pathlib import PurePath, Path
+from PIL import Image
 from typing import List, Optional, Union
 
 import numpy as np
@@ -169,7 +170,10 @@ class ModelWrapper():
 
         if self._mode == 'train' and labels is None:
             raise ValueError("In train mode, instance_map must be provided.")
-
+        
+        if isinstance(model_input, Image.Image):
+            model_input = np.array(model_input)
+        
         model_input_preprocessed = self._preprocess_image(model_input)
         model_input_preprocessed = model_input_preprocessed.to(self._device)
 
