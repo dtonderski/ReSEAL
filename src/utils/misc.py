@@ -45,4 +45,4 @@ def semantic_map_to_categorical_map(
     Returns:
         NDArray[Shape["Height, Width"], Int]: semantic categories of the semantic map.
     """
-    return (semantic_map[:,:,:,1:].argmax(axis=-1) + semantic_map[:,:,:,1:].sum(axis=-1))
+    return (semantic_map[...,1:].argmax(axis=-1) + semantic_map[...,1:].sum(axis=-1))
