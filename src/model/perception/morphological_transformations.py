@@ -58,7 +58,7 @@ def remove_small_objects(label_map: LabelMap3DCategorical, number_of_voxels_thre
 def dilate_onehot_label_map(label_map: LabelMap3DOneHot):
     for i in range(1, label_map.shape[-1]):
         label_map[..., i] = binary_dilation(label_map[..., i], iterations=1)
-        label_map[label_map[..., i], 0] = 1
+    label_map[label_map[..., 0] == 0, :] = 0
     return label_map
 
 def dilate_map(label_map: LabelMap3DCategorical):

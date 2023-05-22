@@ -53,7 +53,8 @@ class WandbPerceptionLogger:
         if "run_name" in perception_cfg:
             return perception_cfg.run_name
         else:
-            return (f"num_scenes: {perception_cfg.DATA_GENERATOR.NUM_SCENES}, "
+            return (f"score_threshold: {perception_cfg.MODEL.SCORE_THRESHOLD}, "
+                    f"num_scenes: {perception_cfg.DATA_GENERATOR.NUM_SCENES}, "
                     f"num_steps: {perception_cfg.DATA_GENERATOR.NUM_STEPS}")
 
     def on_epoch_end(self, epoch):

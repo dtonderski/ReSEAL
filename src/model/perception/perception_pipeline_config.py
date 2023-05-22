@@ -93,8 +93,8 @@ def map_processor_cfg() -> CfgNode:
     """
     map_processor_cfg = CfgNode()
     map_processor_cfg.NO_OBJECT_CONFIDENCE_THRESHOLD = 0.5
-    map_processor_cfg.HOLE_VOXEL_THRESHOLD = 10
-    map_processor_cfg.OBJECT_VOXEL_THRESHOLD = 10
+    map_processor_cfg.HOLE_VOXEL_THRESHOLD = 2000
+    map_processor_cfg.OBJECT_VOXEL_THRESHOLD = 200
     map_processor_cfg.DILATE = True
     return map_processor_cfg
 
