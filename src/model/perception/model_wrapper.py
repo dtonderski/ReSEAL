@@ -134,6 +134,7 @@ class ModelWrapper():
 
     def cuda(self):
         self._update_device('cuda')
+
     def cpu(self):
         self._update_device('cpu')
 

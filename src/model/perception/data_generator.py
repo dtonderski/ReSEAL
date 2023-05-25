@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import List, Optional, Tuple
 
-import _pickle as cPickle
+import pickle
 import numpy as np
 from habitat_sim import Simulator
 from habitat_sim.simulator import ObservationDict
@@ -87,7 +87,7 @@ class DataGenerator:
         """
         scene_ids = self._sample_scene_ids()
         if self._wandb_logger:
-            self._wandb_logger.log_scene_ids(scene_ids, epoch)
+            self._wandb_logger.log_scene_ids(scene_ids)
         for i, scene_id in enumerate(scene_ids):
             print(f"Generating data for scene {scene_id}: {i+1}/{len(scene_ids)}, epoch {epoch}...")
             self._process_scene(model, scene_id, epoch)
@@ -99,7 +99,7 @@ class DataGenerator:
             scene_id (str): the scene id to process.
             epoch (int): the current epoch.
         """
-        data_paths = GenerateEpochTrajectoryFilepaths(self._perception_cfg.DATA_PATHS, 
+        data_paths = GenerateEpochTrajectoryFilepaths(self._perception_cfg.DATA_PATHS,
                                                 self._perception_cfg.DATA_GENERATOR.SPLIT,
                                                 scene_id, epoch)
 
@@ -115,7 +115,7 @@ class DataGenerator:
         pose, t, label_generator, data_paths = args
         label_dict = label_generator.get_label_dict(pose)
         with open((data_paths.label_dict_dir / str(t)).with_suffix('.pickle'), 'wb') as fp:
-            cPickle.dump(label_dict, fp)
+            pickle.dump(label_dict, fp)
         print(f"Saved label dict for step {t}.   ", end = '\r')
 
     def _generate_labels(
@@ -159,12 +159,11 @@ class DataGenerator:
             observations: ObservationDict = sim.step(action)
             rgb = observations["color_sensor"]  # pylint: disable=unsubscriptable-object
             depth = observations["depth_sensor"]  # pylint: disable=unsubscriptable-object
-            semantics = observations["semantic_sensor"] if use_semantic_sensor else None
+            semantics = observations["semantic_sensor"] if use_semantic_sensor else None # pylint: disable=unsubscriptable-object
             self._save_observations_and_poses(count, rgb, depth, semantics, data_paths)
             pose = (sim.get_agent(0).state.position, sim.get_agent(0).state.rotation)
 
             poses.append(pose)
-            
             map = model(rgb[..., :3])
             map_builder.update_point_cloud(map, depth, pose) # type: ignore[arg-type]
         print("Data generated! Updating semantic map...")
@@ -231,11 +230,15 @@ class DataGenerator:
         ) -> None:
         """ Saves the semantic map and grid_index_of_origin to the data_paths for visualization purposes.
         """
-        print(f"Saving map builder to {data_paths.map_builder_filepath}.")
-        with open(data_paths.map_builder_filepath, 'wb') as fp:
-            cPickle.dump(map_builder, fp)
+        print(f"Saving semantic map to {data_paths.semantic_map_filepath}.")
+        with open(data_paths.semantic_map_filepath, 'wb') as fp:
+            pickle.dump(map_builder.semantic_map, fp)
+        print(f"Saving grid index of origin to {data_paths.grid_index_of_origin_filepath}")
+        with open(data_paths.grid_index_of_origin_filepath, 'wb') as fp:
+            pickle.dump(map_builder.get_grid_index_of_origin(), fp)
+        print(f"Saving poses to {data_paths.poses_filepath}")
         with open(data_paths.poses_filepath, 'wb') as fp:
-            cPickle.dump(poses, fp)
+            pickle.dump(poses, fp)
     
     def _save_categorical_label_map_to_wandb(self, label_generator: LabelGenerator, grid_index_of_origin,
                                              scene_id: str, epoch: int) -> None:

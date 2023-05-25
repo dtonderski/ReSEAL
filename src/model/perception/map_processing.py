@@ -35,6 +35,7 @@ class MapProcessor:
                 3. OBJECT_VOXEL_THRESHOLD (int): the number of voxels below which an object is considered small and is \
                     removed.
                 4. DILATE (bool): whether to dilate the label map after filling holes and removing small objects.
+                5. EXPAND_OCCUPANCY (bool): whether to expand the occupancy map during dilation.
         """
         self._config = map_processor_cfg
         self._categorical_label_map = self._semantic_map_to_categorical_label_map(semantic_map)
@@ -132,11 +133,14 @@ class MapProcessor:
         onehot_label_map_dilated = self.dilate_onehot_label_map(onehot_label_map)
         self._categorical_label_map = self.onehot_label_map_to_categorical_label_map(onehot_label_map_dilated)
 
-    @staticmethod
-    def dilate_onehot_label_map(onehot_label_map: LabelMap3DOneHot) -> LabelMap3DOneHot:
-        """ Dilate a onehot label map. This is done by dilating each semantic label separately and then setting the \
-            occupancy to 1 wherever there is any semantic label.
-
+    def dilate_onehot_label_map(self, onehot_label_map: LabelMap3DOneHot) -> LabelMap3DOneHot:
+        """ Dilate a onehot label map.
+        
+            If EXPAND_OCCUPANCY is true, then this is done by dilating each semantic label \
+            separately and then setting the occupancy to 1 wherever there is any semantic label.
+            
+            Otherwise, this is done by dilating each semantic label separately and then setting the \
+            semantic labels to 0 wherever there is no occupancy.
         Args:
             onehot_label_map (LabelMap3DOneHot): the onehot label map to dilate.
 
@@ -145,7 +149,10 @@ class MapProcessor:
         """
         for i in range(1, onehot_label_map.shape[-1]):
             onehot_label_map[..., i] = binary_dilation(onehot_label_map[..., i], iterations=1)
-            onehot_label_map[onehot_label_map[..., i], 0] = 1
+            if self._config.EXPAND_OCCUPANCY:
+                onehot_label_map[onehot_label_map[..., i], 0] = 1
+        if not self._config.EXPAND_OCCUPANCY:
+            onehot_label_map[onehot_label_map[..., 0] == 0, :] = 0
         return onehot_label_map
 
     @staticmethod

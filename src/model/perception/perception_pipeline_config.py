@@ -16,8 +16,17 @@ def get_perception_cfg() -> CfgNode:
     perception_cfg.MODEL = model_cfg()
     perception_cfg.SIM = sim_cfg()
     perception_cfg.TRAINING = training_cfg()
+    perception_cfg.WANDB = wandb_cfg()
     
     return perception_cfg
+
+def wandb_cfg() -> CfgNode:
+    wandb_cfg = CfgNode()
+    wandb_cfg.USE_WANDB = True
+    wandb_cfg.LOG_MAP = True
+    wandb_cfg.LOG_LOSS = True
+    wandb_cfg.LOG_SCENE_IDS = True
+    return wandb_cfg
 
 def data_generator_cfg() -> CfgNode:
     """ All of these parameters are used during perception training. For a description of the parameters, see the 
@@ -96,6 +105,7 @@ def map_processor_cfg() -> CfgNode:
     map_processor_cfg.HOLE_VOXEL_THRESHOLD = 2000
     map_processor_cfg.OBJECT_VOXEL_THRESHOLD = 200
     map_processor_cfg.DILATE = True
+    map_processor_cfg.EXPAND_OCCUPANCY = False
     return map_processor_cfg
 
 def action_module_cfg() -> CfgNode:
@@ -140,9 +150,9 @@ def training_cfg() -> CfgNode:
     """ This defines the training parameters.
     """
     train_cfg = CfgNode()
-    train_cfg.NUM_EPOCHS = 20
+    train_cfg.NUM_EPOCHS = 30
     train_cfg.NUM_CLASSES = 6
-    train_cfg.BATCH_SIZE = 8
+    train_cfg.BATCH_SIZE = 4
     train_cfg.SHUFFLE = True
     train_cfg.NUM_WORKERS = 4
     train_cfg.LEARNING_RATE = 0.005

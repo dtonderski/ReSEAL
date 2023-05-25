@@ -37,15 +37,19 @@ class WandbPerceptionLogger:
     
     def __init__(self, perception_cfg: CfgNode):
         """ Initializes the wandb run. """
-        wandb.init(
-            entity='davton',
-            project='reseal',
-            name=self._get_run_name(perception_cfg),
-        )
+        self._config = perception_cfg.WANDB
 
-        wandb.define_metric("batch")
-        wandb.define_metric("epoch")
-        self.add_config("perception_cfg", perception_cfg)
+        if self._config.USE_WANDB:
+            wandb.init(
+                entity='davton',
+                project='reseal',
+                name=self._get_run_name(perception_cfg),
+            )
+            
+            
+            wandb.define_metric("batch")
+            wandb.define_metric("epoch")
+            self.add_config("perception_cfg", perception_cfg)
     
     @staticmethod
     def _get_run_name(perception_cfg: CfgNode):
@@ -60,26 +64,30 @@ class WandbPerceptionLogger:
     def on_epoch_end(self, epoch):
         """ Log the epoch and commit to server.
         """
-        wandb.log({"epoch": epoch})
+        if self._config.USE_WANDB:
+            wandb.log({"epoch": epoch})
         
     
-    def log_scene_ids(self, scene_ids: List[str], epoch: int) -> None:
+    def log_scene_ids(self, scene_ids: List[str]) -> None:
         """ Logs the scene ids to wandb. """
-        wandb.log({"scene_ids": wandb.Html("<br>".join(scene_ids), inject=False)}, commit=False)
+        if self._config.LOG_SCENE_IDS and self._config.USE_WANDB:
+            wandb.log({"scene_ids": wandb.Html("<br>".join(scene_ids), inject=False)}, commit=False)
     
     def log_categorical_label_map(self, label_map: LabelMap3DCategorical, grid_index_of_origin: GridIndex3D, 
                                   resolution: float, scene_id: str, epoch: int) -> None:
         """ Saves a categorical label map to log it to wandb. """
-        fig = wandb.Plotly(
-            visualize_categorical_label_map_plotly(label_map, grid_index_of_origin, resolution, scene_id, epoch))
+        if self._config.LOG_MAP and self._config.USE_WANDB:
+            fig = wandb.Plotly(
+                visualize_categorical_label_map_plotly(label_map, grid_index_of_origin, resolution, scene_id, epoch))
 
-        wandb.log({f"label_map_{scene_id}": fig}, commit=False)
+            wandb.log({f"label_map_{scene_id}": fig}, commit=False)
         
         #self._label_map_figs.append(fig)
     
     def log_average_loss_dict(self, loss_dict: LossDict) -> None:
         """ Logs the average loss dictionary to wandb. """
-        wandb.log(loss_dict, commit=False)
+        if self._config.LOG_LOSS and self._config.USE_WANDB:
+            wandb.log(loss_dict, commit=False)
 
     def add_configs(self, cfg_dict_names: List[CfgNode], cfg_nodes: List[CfgNode]) -> None:
         """ Adds a list of configuration dictionaries to the wandb config. """
@@ -88,7 +96,8 @@ class WandbPerceptionLogger:
     
     def add_config(self, cfg_dict_name: str, cfg_node: CfgNode):
         """ Adds a configuration dictionary to the wandb config. """
-        wandb.config[cfg_dict_name] = cfg_node_to_dict(cfg_node)
+        if self._config.USE_WANDB:
+            wandb.config[cfg_dict_name] = cfg_node_to_dict(cfg_node)
     
     def add_unusual_config(self, config_dict: Dict[str, Any]) -> None:
         """ This adds a config dictionary to the "unusual" wandb config key. This is used because our configuration 
@@ -99,9 +108,10 @@ class WandbPerceptionLogger:
             key (str): the key, for example NUM_EPOCHS
             value (Any): the value, for example 100.
         """
-        if 'unusual' not in wandb.config:
-            wandb.config['unusual'] = {}
-        wandb.config['unusual'].update(config_dict)
+        if self._config.USE_WANDB:
+            if 'unusual' not in wandb.config:
+                wandb.config['unusual'] = {}
+            wandb.config['unusual'].update(config_dict)
 
 # def main():
 #     wandb_logger = WandbPerceptionLogger("test2")

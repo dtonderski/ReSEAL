@@ -111,8 +111,12 @@ class GenerateEpochTrajectoryFilepaths:
         return self.trajectory_output_dir / "rotations.npy"
     
     @property
-    def map_builder_filepath(self) -> Path:
-        return self.trajectory_output_dir / "map_builder.pickle"
+    def semantic_map_filepath(self) -> Path:
+        return self.trajectory_output_dir / "semantic_map.pickle"
+    
+    @property
+    def grid_index_of_origin_filepath(self) -> Path:
+        return self.trajectory_output_dir / "grid_index_of_origin.pickle"
     
     @property
     def poses_filepath(self) -> Path:
