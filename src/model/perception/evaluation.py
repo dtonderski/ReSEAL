@@ -27,10 +27,11 @@ def get_ground_truth(semantics: NDArray[Shape["256, 256"], UInt8], semantic_info
         if object_index == 0:
             continue
         # Find the minimum and maximum index in each dimension where the index is present in the cleared_semantics
-        min_x = np.min(np.where(semantics == object_index)[0])
-        min_y = np.min(np.where(semantics == object_index)[1])
-        max_x = np.max(np.where(semantics == object_index)[0])
-        max_y = np.max(np.where(semantics == object_index)[1])
+        min_y = np.min(np.where(semantics == object_index)[0])
+        min_x = np.min(np.where(semantics == object_index)[1])
+        max_y = np.max(np.where(semantics == object_index)[0])
+        max_x = np.max(np.where(semantics == object_index)[1])
+
         boxes.append([min_x, min_y, max_x, max_y])
         labels.append(reseal_semantics[semantics == object_index][0])
         masks.append(semantics == object_index)

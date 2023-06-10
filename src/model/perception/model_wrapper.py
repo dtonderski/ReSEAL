@@ -1,15 +1,17 @@
-from pathlib import PurePath, Path
-from PIL import Image
+from pathlib import Path, PurePath
 from typing import List, Optional, Union
 
 import numpy as np
 import torch
 import torch.nn as nn
 from jaxtyping import Float, Float32, Int64, UInt8
+from PIL import Image
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchvision.models.detection import MaskRCNN_ResNet50_FPN_Weights, maskrcnn_resnet50_fpn
 from typing_extensions import TypedDict
 from yacs.config import CfgNode
 
+from src.model.perception.evaluation import GroundTruthDict
 from src.utils.category_mapping import get_maskrcnn_index_to_reseal_index_dict, get_reseal_index_to_maskrcnn_index_dict
 from src.utils.datatypes import SemanticMap2D
 
@@ -187,6 +189,50 @@ class ModelWrapper():
             return semantic_maps[0]
 
         return semantic_maps
+
+    def get_metrics(self,
+                    model_input: Union[Float[torch.Tensor, "B C H W"],
+                                       Float[np.ndarray, "H W C"]],
+                    ground_truths: List[GroundTruthDict],
+                    iou_thresholds: Optional[List[float]] = None
+                    ) -> float:
+        """ Calculates MAP for the given IOU thresholds
+
+        Args:
+            model_input (Union[Float[torch.Tensor, "B C H W"],
+                               Float[np.ndarray, "H W C"]]): _description_
+            ground_truths (List[GroundTruthDict]): _description_
+            iou_thresholds (Optional[List[float]], optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
+        if iou_thresholds is None:
+            iou_thresholds = [0.5]
+        if self._mode == 'train':
+            raise ValueError("Cannot get metrics in train mode!")
+        if isinstance(model_input, Image.Image):
+            model_input = np.array(model_input)
+        
+        model_input_preprocessed = self._preprocess_image(model_input)
+        model_input_preprocessed = model_input_preprocessed.to(self._device)
+        predictions = self._maskrcnn(model_input_preprocessed)
+        return self._calculate_metrics(predictions, ground_truths, iou_thresholds)
+
+    def _calculate_metrics(self, predictions: List[PredictionDict], ground_truth: List[GroundTruthDict], 
+                           iou_thresholds: List[float]) -> float:
+        
+        maskrcnn_to_reseal = get_maskrcnn_index_to_reseal_index_dict()
+        cleaned_label_dicts = []
+        for label_dict in predictions:
+            reseal_labels = torch.tensor([maskrcnn_to_reseal[label] for label in label_dict['labels'].cpu().numpy()])
+            label_dict_cleaned = {k: v[reseal_labels>0].detach().cpu() for k,v in label_dict.items()} # type: ignore
+            label_dict_cleaned['labels'] = reseal_labels[reseal_labels>0]
+            label_dict_cleaned['masks'] = label_dict_cleaned['masks'].squeeze(1) > 0.5
+            cleaned_label_dicts.append(label_dict_cleaned)
+            
+        map = MeanAveragePrecision(iou_thresholds=iou_thresholds, rec_thresholds=[])
+        return float(map(cleaned_label_dicts, ground_truth)['map'])
 
     def _preprocess_labels(self,
                            labels: Optional[Union[List[LabelDict], LabelDict]],

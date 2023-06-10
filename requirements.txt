@@ -24,3 +24,5 @@ torchvision==0.14.1
 # jaxtyping is recommended for torch tensor shape annotations
 jaxtyping==0.2.12
 wandb==0.15.3
+# required for calculating MAP
+torchmetrics==0.11.4
