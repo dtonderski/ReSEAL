@@ -11,6 +11,7 @@ from src.model.perception.model_wrapper import ModelWrapper
 from src.data import scene, filepath
 
 from stable_baselines3 import PPO
+from stable_baselines3.common import vec_env
 import wandb
 from wandb.integration.sb3 import WandbCallback
 
@@ -51,6 +52,7 @@ def main(
         "entropy_coefficient": training_cfg.ENTROPY_COEFFICIENT,
         "value_loss_coefficient": training_cfg.VALUE_LOSS_COEFFICIENT,
         "global_policy_polling_frequency": env_cfg.GLOBAL_POLICY_POLLING_FREQUENCY,
+        "num_envs": training_cfg.NUM_ENVS,
     }
     run = wandb.init(
         project="reseal",
@@ -69,15 +71,17 @@ def main(
     map_builder = SemanticMap3DBuilder(map_builder_cfg, sim_cfg)
     perception_model = ModelWrapper(perception_model_cfg, device="cuda")
     preprocessor = create_preprocessor(action_module_cfg.PREPROCESSOR)
-    env = HabitatEnv(
-        sim,
-        local_policy,
-        map_builder,
-        perception_model,
-        preprocessor,
-        env_cfg,
-        str(data_paths.navmesh_filepath),
-    )
+    def env_factory():
+        return HabitatEnv(
+            sim,
+            local_policy,
+            map_builder,
+            perception_model,
+            preprocessor,
+            env_cfg,
+            str(data_paths.navmesh_filepath),
+        )
+    env = vec_env.DummyVecEnv([env_factory for _ in range(training_cfg.NUM_ENVS)])
     action_module_cfg.GLOBAL_POLICY.MAP_SHAPE = map_builder.semantic_map_at_pose_shape
     policy_kwargs = create_global_policy(
         action_module_cfg.GLOBAL_POLICY,
