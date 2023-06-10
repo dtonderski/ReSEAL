@@ -4,14 +4,13 @@ from typing import List, Optional, Union
 import numpy as np
 import torch
 import torch.nn as nn
-from jaxtyping import Float, Float32, Int64, UInt8
+from jaxtyping import Float, Float32, Int64, UInt8, Bool
 from PIL import Image
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchvision.models.detection import MaskRCNN_ResNet50_FPN_Weights, maskrcnn_resnet50_fpn
 from typing_extensions import TypedDict
 from yacs.config import CfgNode
 
-from src.model.perception.evaluation import GroundTruthDict
 from src.utils.category_mapping import get_maskrcnn_index_to_reseal_index_dict, get_reseal_index_to_maskrcnn_index_dict
 from src.utils.datatypes import SemanticMap2D
 
@@ -35,6 +34,11 @@ class LabelDict(TypedDict):
     # The masks are binary
     masks: UInt8[torch.Tensor, "N H W"]
 
+class GroundTruthDict(TypedDict):
+    boxes: Float32[torch.Tensor, "N 4"]
+    labels: Int64[torch.Tensor, "N"]
+    # The masks are binary
+    masks: Bool[torch.Tensor, "N H W"]
 class ModelWrapper():
     """This class wraps the maskrcnn_resnet50_fpn model from torchvision. It follows the pytorch API closely. In 
     eval mode, it outputs either a SemanticMap2D or a list of SemanticMap2D. In train mode, it outputs a LossDict,
@@ -288,3 +292,4 @@ class ModelWrapper():
                     semantic_map[..., label-1] = mask.squeeze()
             semantic_maps.append(semantic_map.detach().cpu().numpy())
         return semantic_maps
+

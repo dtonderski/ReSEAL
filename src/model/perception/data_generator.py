@@ -23,7 +23,7 @@ from src.utils.datatypes import Pose, SemanticMap3D, GridIndex3D
 
 
 class DataGenerator:
-    def __init__(self, perception_cfg: CfgNode, wandb_logger: Optional[WandbPerceptionLogger] = None) -> None:
+    def __init__(self, perception_cfg: CfgNode, wandb_logger: Optional[WandbPerceptionLogger] = None, evaluation_mode: Optional[bool] = False) -> None:
         """ This class is responsible for generating the training data for the perception module. It uses the action \
             module to generate the trajectories and the semantic map builder to generate the semantic maps. The data \
             saved is the RGBD data, the semantic data if available (this is only used for benchmarking), and the \
@@ -74,6 +74,7 @@ class DataGenerator:
         """
         self._perception_cfg = perception_cfg
         self._wandb_logger = wandb_logger
+        self._evaluation_mode = evaluation_mode
     
     def __call__(self, model: ModelWrapper, epoch: int) -> None:
         """ This does the following:
@@ -104,6 +105,8 @@ class DataGenerator:
                                                 scene_id, epoch)
 
         semantic_map, grid_index_of_origin, poses = self._step_through_trajectory(model, data_paths)
+        if self._evaluation_mode:
+            return
         
         label_generator = LabelGenerator(semantic_map, grid_index_of_origin, self._perception_cfg.MAP_BUILDER, 
                                             self._perception_cfg.MAP_PROCESSOR, self._perception_cfg.SIM.SENSOR_CFG)
@@ -158,14 +161,19 @@ class DataGenerator:
 
             observations: ObservationDict = sim.step(action)
             rgb = observations["color_sensor"]  # pylint: disable=unsubscriptable-object
-            depth = observations["depth_sensor"]  # pylint: disable=unsubscriptable-object
             semantics = observations["semantic_sensor"] if use_semantic_sensor else None # pylint: disable=unsubscriptable-object
+            
+            depth = observations["depth_sensor"]  # pylint: disable=unsubscriptable-object
             self._save_observations_and_poses(count, rgb, depth, semantics, data_paths)
+            if self._evaluation_mode:
+                continue
             pose = (sim.get_agent(0).state.position, sim.get_agent(0).state.rotation)
 
             poses.append(pose)
             map = model(rgb[..., :3])
             map_builder.update_point_cloud(map, depth, pose) # type: ignore[arg-type]
+        if self._evaluation_mode:
+            return None, None, None
         sim.close()
         print("Data generated! Updating semantic map...")
         map_builder.update_semantic_map()
