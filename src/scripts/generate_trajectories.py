@@ -64,7 +64,7 @@ def main(
         map_builder = SemanticMap3DBuilder(map_builder_cfg, sim_cfg)
         perception_model = ModelWrapper(perception_model_cfg, device='cuda')
         # Initialize action pipeline
-        action_module_cfg.PREPROCESSOR.NAME = "IdentityPreprocessor"
+        action_module_cfg.PREPROCESSOR.NAME = "ChannelFirstPreprocessor"
         action_module_cfg.GLOBAL_POLICY.NAME = "LoadTrainedPolicy"
         action_module_cfg.GLOBAL_POLICY.MAP_SHAPE = map_builder.semantic_map_at_pose_shape
         action_pipeline = pipeline.create_action_pipeline(action_module_cfg, str(data_paths.navmesh_filepath), agent)

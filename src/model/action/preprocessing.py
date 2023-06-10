@@ -18,7 +18,7 @@ class DummyPreprocessor(SemanticMapPreprocessor):
         return torch.Tensor()
 
 
-class IdentityPreprocessor(SemanticMapPreprocessor):
+class ChannelFirstPreprocessor(SemanticMapPreprocessor):
     def __call__(self, semantic_map: datatypes.SemanticMap3D) -> torch.Tensor:
         semantic_map = np.transpose(semantic_map, (3, 0, 1, 2))
         if len(semantic_map.shape) == 4:
@@ -29,6 +29,6 @@ class IdentityPreprocessor(SemanticMapPreprocessor):
 def create_preprocessor(preprocessor_cfg: CfgNode) -> SemanticMapPreprocessor:
     if preprocessor_cfg.NAME == "DummyPreprocessor":
         return DummyPreprocessor()
-    elif preprocessor_cfg.NAME == "IdentityPreprocessor":
-        return IdentityPreprocessor()
+    elif preprocessor_cfg.NAME == "ChannelFirstPreprocessor":
+        return ChannelFirstPreprocessor()
     raise RuntimeError(f"Unknown preprocessor: {preprocessor_cfg.NAME}")

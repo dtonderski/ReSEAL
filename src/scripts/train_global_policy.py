@@ -26,7 +26,7 @@ def main(
     sim_cfg = cfg.default_sim_cfg()
     action_module_cfg = cfg.default_action_module_cfg()
     action_module_cfg.GLOBAL_POLICY.NAME = "MultiInputPolicy"
-    action_module_cfg.PREPROCESSOR.NAME = "IdentityPreprocessor"
+    action_module_cfg.PREPROCESSOR.NAME = "ChannelFirstPreprocessor"
     map_builder_cfg = cfg.default_map_builder_cfg()
     perception_model_cfg = cfg.default_perception_model_cfg()
     data_paths_cfg = cfg.default_data_paths_cfg()
