@@ -85,7 +85,7 @@ def main(
         return_kwargs=True,
     )
 
-    model = PPO(
+    ppo = PPO(
         "MultiInputPolicy",
         env,
         policy_kwargs=policy_kwargs,  # type: ignore[arg-type]
@@ -99,7 +99,7 @@ def main(
         device="cuda",
         tensorboard_log=f"runs/{run.id}",  # type: ignore[union-attr]
     )
-    model.learn(
+    ppo.learn(
         total_timesteps=training_cfg.NUM_TOTAL_STEPS,  # type: ignore[arg-type]
         callback=WandbCallback(
             model_save_path=training_cfg.MODEL_PATH,
@@ -109,7 +109,7 @@ def main(
         ),
     )
     model_save_path = training_cfg.MODEL_PATH + f"/{run.id}.pth"  # type: ignore[union-attr]
-    model.policy.save(model_save_path)
+    ppo.policy.save(model_save_path)
 
     run.finish()  # type: ignore[union-attr]
 
