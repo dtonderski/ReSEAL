@@ -4,6 +4,17 @@ from gymnasium import spaces
 
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
+class SeparableConv3d(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride, padding):
+        super().__init__()
+        self.depthwise_conv = nn.Conv3d(in_channels, in_channels, kernel_size, stride, padding, groups=in_channels)
+        self.pointwise_conv = nn.Conv3d(in_channels, out_channels, 1)
+
+    def forward(self, x):
+        x = self.depthwise_conv(x)
+        x = self.pointwise_conv(x)
+        return x
+
 
 class SemanticMapFeatureExtractor(BaseFeaturesExtractor):
     """Custom feature extractor for semantic map observations."""
@@ -39,22 +50,22 @@ class SemanticMapFeatureExtractor(BaseFeaturesExtractor):
         features = torch.cat(encoded_tensor_list, dim=1)
         return self.linear(features)
 
-    def _init_map_feature_extractor(self, map_obs_space: spaces.Box) -> None:
+   def _init_map_feature_extractor(self, map_obs_space: spaces.Box) -> None:
         n_input_channels = map_obs_space.shape[0]
         self._map_feature_extractor = nn.Sequential(
-            nn.Conv3d(n_input_channels, 32, kernel_size=3, stride=1, padding=1),
+            SeparableConv3d(n_input_channels, 32, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
-            nn.Conv3d(32, 64, kernel_size=3, stride=1, padding=1),
+            SeparableConv3d(32, 64, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
-            nn.Conv3d(64, 128, kernel_size=3, stride=1, padding=1),
+            SeparableConv3d(64, 128, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
-            nn.Conv3d(128, 256, kernel_size=3, stride=1, padding=1),
+            SeparableConv3d(128, 256, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
-            nn.Conv3d(256, 512, kernel_size=5, stride=1, padding=0),
+            SeparableConv3d(256, 512, kernel_size=5, stride=1, padding=0),
             nn.ReLU(),
             nn.Flatten(),
         )
