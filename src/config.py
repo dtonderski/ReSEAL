@@ -64,7 +64,7 @@ def default_action_module_cfg() -> CfgNode:
     # Config for global policy
     action_module_cfg.GLOBAL_POLICY = CfgNode()
     action_module_cfg.GLOBAL_POLICY.NAME = "RandomGlobalPolicy"
-    action_module_cfg.GLOBAL_POLICY.MODEL_PATH = "models/action/"
+    action_module_cfg.GLOBAL_POLICY.MODEL_PATH = "models/minival/00800-TEEsavR23oF/global_policy/gsih22by.pth"
     action_module_cfg.GLOBAL_POLICY.MAP_SHAPE = (40, 40, 40, 7)
     # Config for global policy LR schedule
     action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE = CfgNode()

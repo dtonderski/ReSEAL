@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Dict, Optional
 
 import torch
 from habitat_sim.agent import Agent
@@ -38,7 +38,7 @@ class ActionPipeline:
         self._counter = Counter(action_pipeline_cfg.GLOBAL_POLICY_POLLING_FREQUENCY)
         self._device = torch.device("cuda")
 
-    def forward(self, semantic_map: datatypes.SemanticMap3D) -> Optional[datatypes.AgentAction]:
+    def forward(self, obs: Dict) -> Optional[datatypes.AgentAction]:
         """Given a semantic map, generates agent action to reach the goal. If not possible, returns None
 
         Args:
@@ -48,8 +48,10 @@ class ActionPipeline:
             Optional[datatypes.AgentAction]: Agent action to reach the goal
         """
         if self.is_update_global_goal():
-            preprocessed_semantic_map = self._semantic_map_preprocessor(semantic_map).to(device=self._device)
-            global_goal, _, _ = self._global_policy(preprocessed_semantic_map, self._is_deterministic)
+            obs["map"] = self._semantic_map_preprocessor(obs["map"])
+            for key in obs:
+                obs[key] = torch.Tensor(obs[key]).to(self._device)
+            global_goal, _, _ = self._global_policy(obs, self._is_deterministic)
             self._global_goal = tuple(global_goal.numpy(force=True)[0])  # type: ignore[assignment]
         self._counter.step()
         return self._local_policy(self._global_goal)

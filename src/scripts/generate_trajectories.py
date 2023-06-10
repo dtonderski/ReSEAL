@@ -3,7 +3,6 @@ from typing import Optional
 
 import numpy as np
 from fire import Fire
-from habitat_sim.simulator import ObservationDict
 from PIL import Image
 from tqdm import trange
 
@@ -109,7 +108,8 @@ def main(
                 map_builder.update_semantic_map()
                 observation_cache.clear()
             semantic_map_3d = map_builder.semantic_map_at_pose(pose)
-            action = action_pipeline.forward(semantic_map_3d)
+            obs = {"map": semantic_map_3d, "position": positions[count].reshape(1, 3)}
+            action = action_pipeline.forward(obs)
         else:
             action = actions[count]
         if action:
