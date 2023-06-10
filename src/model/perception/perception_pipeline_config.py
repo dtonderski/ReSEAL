@@ -22,7 +22,7 @@ def get_perception_cfg() -> CfgNode:
 
 def wandb_cfg() -> CfgNode:
     wandb_cfg = CfgNode()
-    wandb_cfg.USE_WANDB = True
+    wandb_cfg.USE_WANDB = False
     wandb_cfg.LOG_MAP = True
     wandb_cfg.LOG_LOSS = True
     wandb_cfg.LOG_SCENE_IDS = True

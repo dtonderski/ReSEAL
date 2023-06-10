@@ -103,6 +103,7 @@ basin	basin	sink
 basin faucet	basin faucet	objects
 basket	basket	objects
 basket /w books	basket with books	objects
+basket with books	basket with books	objects
 basket of fruits	basket of fruits	objects
 basket of something	basket of something	misc
 basket of towels	basket of towels	misc
@@ -453,6 +454,7 @@ chandelier	chandelier	lighting
 changing table	changing table	table
 charger	charger	objects
 chasis	chassis	objects
+chassis	chassis	objects
 chess	chess	misc
 chest	chest	misc
 chest bench	chest bench	misc
@@ -2170,6 +2172,7 @@ utensil	utensil	objects
 vaccum cleaner	vacuum cleaner	appliances
 vacuum cleaner	vacuum cleaner	appliances
 valve	plumbing	objects
+plumbing	plumbing	objects
 vanity	vanity	table
 vanity table	vanity	table
 vase	vase	objects

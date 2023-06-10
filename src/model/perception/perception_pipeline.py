@@ -8,11 +8,12 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from yacs.config import CfgNode
 
-from src.data.MaskRCNNDataset import MaskRCNNDataset, collate_fn
+from src.data.MaskRCNNDataset import MaskRCNNDataset, MaskRCNNEvaluationDataset, collate_fn
 from src.model.perception.data_generator import DataGenerator
 from src.model.perception.model_wrapper import LossDict, ModelWrapper
 from src.model.perception.wandb_perception_logger import WandbPerceptionLogger
 from src.model.perception.perception_pipeline_config import get_perception_cfg
+from src.model.perception.evaluation import get_ground_truth
 
 
 
@@ -55,6 +56,29 @@ def train_perception_model_for_one_epoch(
     model.eval()
     model.save(pathlib.Path(perception_config.DATA_PATHS.MODEL_DIR) / "MaskRCNN" / f"model_ep{epoch_number}.pth")
     wandb_logger.on_epoch_end(epoch_number)
+
+def evaluate_perception_model(model : ModelWrapper, wandb_logger : WandbPerceptionLogger, perception_cfg:CfgNode)->None:
+    
+    perception_cfg.DATA_GENERATOR.SPLIT = 'minival'
+    perception_cfg.DATA_GENERATOR.NUM_SCENES = 3
+    data_generator = DataGenerator(perception_cfg, wandb_logger, evaluation_mode=True)
+    data_generator(model, 0)
+    eval_dataset = MaskRCNNEvaluationDataset(perception_cfg.DATA_PATHS, perception_cfg.DATA_GENERATOR.SPLIT, 0)
+    eval_dataloader = DataLoader(eval_dataset,
+                                    batch_size=perception_cfg.TRAINING.BATCH_SIZE,
+                                    shuffle=perception_cfg.TRAINING.SHUFFLE,
+                                    num_workers=perception_cfg.TRAINING.NUM_WORKERS,
+                                    collate_fn=collate_fn)
+    metrics = 0
+    count = 0
+    for images, semantics, semantic_info_paths in tqdm(eval_dataloader):
+        count += 1
+        truth_dicts = []
+        for i in range(len(semantics)):
+            truth_dict = get_ground_truth(semantics[i], semantic_info_paths[i])
+            truth_dicts += [truth_dict]
+        metrics += model.get_metrics(images, truth_dicts)
+    return metrics/count
 
 def load_kwargs_to_config(kwargs, config: CfgNode) -> CfgNode:
     for k,v in kwargs.items():
