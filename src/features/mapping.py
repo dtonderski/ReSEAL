@@ -191,6 +191,11 @@ class SemanticMap3DBuilder:
 
         self._sync_master_point_cloud_and_labels(temporary_point_cloud_semantic_labels)
 
+    def clear_semantic_map(self):
+        """Clears the semantic map"""
+        self._semantic_map = None
+        self._semantic_map_bounds = None
+
     def get_grid_index_of_origin(self) -> NDArray[Shape["3"], Int]:
         """ This function is needed because when raytracing in a grid we need the grid index of the origin.
 

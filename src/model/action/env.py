@@ -1,4 +1,5 @@
 from typing import Dict, Tuple
+import warnings
 
 import gymnasium as gym
 import habitat_sim
@@ -131,7 +132,12 @@ class HabitatEnv(gym.Env):
             for semantic_map, (_, depth, pose) in zip(semantic_map_stack, self._observation_cache.get()):
                 self._map_builder.update_point_cloud(semantic_map, depth, pose)
         self._observation_cache.clear()
-        self._map_builder.update_semantic_map()
+        try:
+            self._map_builder.update_semantic_map()
+        except ValueError:
+            warnings.warn("Update semantic map failed, resetting map builder and rebuilding")
+            self._map_builder.clear_semantic_map()
+            self._map_builder.update_semantic_map()
         position = self._sim.get_agent(0).state.position
         rotation = self._sim.get_agent(0).state.rotation
         pose = (position, rotation)
