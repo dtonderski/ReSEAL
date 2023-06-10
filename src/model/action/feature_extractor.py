@@ -53,7 +53,7 @@ class SemanticMapFeatureExtractor(BaseFeaturesExtractor):
             nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
             nn.Conv3d(128, 256, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.MaxPool3d(kernel_size=3, stride=3, padding=0),
+            nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
             nn.Conv3d(256, 512, kernel_size=5, stride=1, padding=0),
             nn.ReLU(),
             nn.Flatten(),

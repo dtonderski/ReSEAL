@@ -13,7 +13,7 @@ def default_map_processor_cfg() -> CfgNode:
 def default_map_builder_cfg() -> CfgNode:
     map_builder_cfg = CfgNode()
     map_builder_cfg.RESOLUTION = 0.05  # m per pixel
-    map_builder_cfg.MAP_SIZE = (6.0, 6.0, 6.0)  # (x, y, z) in m
+    map_builder_cfg.MAP_SIZE = (4.0, 4.0, 4.0)  # (x, y, z) in m
     map_builder_cfg.NUM_SEMANTIC_CLASSES = 6
     return map_builder_cfg
 
@@ -65,7 +65,7 @@ def default_action_module_cfg() -> CfgNode:
     action_module_cfg.GLOBAL_POLICY = CfgNode()
     action_module_cfg.GLOBAL_POLICY.NAME = "RandomGlobalPolicy"
     action_module_cfg.GLOBAL_POLICY.MODEL_PATH = "models/minival/00800-TEEsavR23oF/global_policy/gsih22by.pth"
-    action_module_cfg.GLOBAL_POLICY.MAP_SHAPE = (120, 120, 120, 7)
+    action_module_cfg.GLOBAL_POLICY.MAP_SHAPE = (80, 80, 80, 7)
     # Config for global policy LR schedule
     action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE = CfgNode()
     action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE.NAME = "ConstantLR"

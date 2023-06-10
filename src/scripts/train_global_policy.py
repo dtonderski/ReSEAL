@@ -35,7 +35,6 @@ def main(
     training_cfg = cfg.default_action_training_cfg()
     if training_cfg_filepath:
         training_cfg.merge_from_file(training_cfg_filepath)
-    env_cfg.MAX_STEPS = training_cfg.NUM_STEPS_PER_EPISODE
     training_cfg.MODEL_PATH = f"models/{scene_name}/global_policy" 
 
     wandb.login()
