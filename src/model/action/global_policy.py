@@ -86,7 +86,7 @@ def create_global_policy(
         )
 
     if global_policy_cfg.NAME == "MultiInputPolicy":
-        features_extractor_kwargs = dict(features_dim=256)
+        features_extractor_kwargs = dict(features_dim=512)
         if return_kwargs:
             return dict(
                 features_extractor_class=SemanticMapFeatureExtractor,
