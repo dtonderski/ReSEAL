@@ -36,6 +36,10 @@ def get_ground_truth(semantics: NDArray[Shape["256, 256"], UInt8], semantic_info
         labels.append(reseal_semantics[semantics == object_index][0])
         masks.append(semantics == object_index)
 
+    if len(boxes) == 0:
+        return {'boxes': torch.zeros((0,4)).float(), 'labels': torch.zeros((0)).long(), 
+                'masks': torch.zeros((0, 256, 256)).bool()}
+
     boxes_tensor = torch.tensor(boxes).float()
     labels_tensor = torch.tensor(labels).long()
     masks_tensors = [torch.tensor(mask).bool() for mask in masks]
