@@ -77,10 +77,12 @@ class WandbPerceptionLogger:
                                   resolution: float, scene_id: str, epoch: int) -> None:
         """ Saves a categorical label map to log it to wandb. """
         if self._config.LOG_MAP and self._config.USE_WANDB:
-            fig = wandb.Plotly(
-                visualize_categorical_label_map_plotly(label_map, grid_index_of_origin, resolution, scene_id, epoch))
+            # I don't think this is necessary, but I am having memory issues, so I'll give it a shot.
+            fig = visualize_categorical_label_map_plotly(label_map, grid_index_of_origin, resolution, scene_id, epoch)
+            wandb_fig = wandb.Plotly(fig)
+            del fig
 
-            wandb.log({f"label_map_{scene_id}": fig}, commit=False)
+            wandb.log({f"label_map_{scene_id}": wandb_fig}, commit=False)
         
         #self._label_map_figs.append(fig)
     

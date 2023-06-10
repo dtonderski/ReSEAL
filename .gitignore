@@ -135,6 +135,7 @@ dmypy.json
 /data/
 .vscode/
 /notebooks/dev/
+/visualizations/
 
 # Runs
 /models/

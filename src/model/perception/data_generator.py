@@ -166,6 +166,7 @@ class DataGenerator:
             poses.append(pose)
             map = model(rgb[..., :3])
             map_builder.update_point_cloud(map, depth, pose) # type: ignore[arg-type]
+        sim.close()
         print("Data generated! Updating semantic map...")
         map_builder.update_semantic_map()
         self._save_map_builder_and_poses(map_builder, poses, data_paths)
