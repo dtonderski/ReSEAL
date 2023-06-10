@@ -11,7 +11,7 @@ from src.model.perception.model_wrapper import ModelWrapper
 from src.data import scene, filepath
 
 from stable_baselines3 import PPO
-from stable_baselines3.common import vec_env
+from stable_baselines3.common import vec_env, monitor
 import wandb
 from wandb.integration.sb3 import WandbCallback
 
@@ -72,7 +72,7 @@ def main(
     perception_model = ModelWrapper(perception_model_cfg, device="cuda")
     preprocessor = create_preprocessor(action_module_cfg.PREPROCESSOR)
     def env_factory():
-        return HabitatEnv(
+        env_ = HabitatEnv(
             sim,
             local_policy,
             map_builder,
@@ -81,6 +81,7 @@ def main(
             env_cfg,
             str(data_paths.navmesh_filepath),
         )
+        return monitor.Monitor(env_)
     env = vec_env.DummyVecEnv([env_factory for _ in range(training_cfg.NUM_ENVS)])
     action_module_cfg.GLOBAL_POLICY.MAP_SHAPE = map_builder.semantic_map_at_pose_shape
     policy_kwargs = create_global_policy(
