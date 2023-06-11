@@ -61,11 +61,12 @@ def main(
         save_code=True,
     )
 
-    map_builder = SemanticMap3DBuilder(map_builder_cfg, sim_cfg)
     perception_model = ModelWrapper(perception_model_cfg, device="cuda")
-    preprocessor = create_preprocessor(action_module_cfg.PREPROCESSOR)
 
     def create_sim_factory(scene_name):
+        map_builder = SemanticMap3DBuilder(map_builder_cfg, sim_cfg)
+        assert action_module_cfg.GLOBAL_POLICY.MAP_SHAPE == map_builder.semantic_map_at_pose_shape, "Map shape mismatch"
+        preprocessor = create_preprocessor(action_module_cfg.PREPROCESSOR)
         data_paths = filepath.GenerateTrajectoryFilepaths(data_paths_cfg, scene_name)
         sim = scene.initialize_sim(
             data_paths.scene_split, data_paths.scene_id, data_paths_cfg=data_paths_cfg, sim_cfg=sim_cfg
@@ -94,7 +95,6 @@ def main(
         data_paths = filepath.GenerateTrajectoryFilepaths(data_paths_cfg, scene_name)
         navmesh_filepaths.append(str(data_paths.navmesh_filepath))
     env = vec_env.DummyVecEnv([create_sim_factory(scene_name) for scene_name in training_cfg.SCENES])
-    action_module_cfg.GLOBAL_POLICY.MAP_SHAPE = map_builder.semantic_map_at_pose_shape
     policy_kwargs = create_global_policy(
         action_module_cfg.GLOBAL_POLICY,
         navmesh_filepaths,
