@@ -13,7 +13,7 @@ def default_map_processor_cfg() -> CfgNode:
 def default_map_builder_cfg() -> CfgNode:
     map_builder_cfg = CfgNode()
     map_builder_cfg.RESOLUTION = 0.05  # m per pixel
-    map_builder_cfg.MAP_SIZE = (2.0, 2.0, 2.0)  # (x, y, z) in m
+    map_builder_cfg.MAP_SIZE = (4.0, 4.0, 4.0)  # (x, y, z) in m
     map_builder_cfg.NUM_SEMANTIC_CLASSES = 6
     return map_builder_cfg
 
@@ -66,7 +66,8 @@ def default_action_module_cfg() -> CfgNode:
     # Config for global policy
     action_module_cfg.GLOBAL_POLICY = CfgNode()
     action_module_cfg.GLOBAL_POLICY.NAME = "RandomGlobalPolicy"
-    action_module_cfg.GLOBAL_POLICY.OBSERVATION_SPACE_SHAPE = [100, 100, 100, 11] # Shape of semantic map patch
+    action_module_cfg.GLOBAL_POLICY.MODEL_PATH = "models/minival/00800-TEEsavR23oF/global_policy/gsih22by.pth"
+    action_module_cfg.GLOBAL_POLICY.MAP_SHAPE = (80, 80, 80, 7)
     # Config for global policy LR schedule
     action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE = CfgNode()
     action_module_cfg.GLOBAL_POLICY.LR_SCHEDULE.NAME = "ConstantLR"
@@ -76,8 +77,8 @@ def default_action_module_cfg() -> CfgNode:
     action_module_cfg.LOCAL_POLICY.DISTANCE_THRESHOLD = 0.1 #m
     # Config for inference
     action_module_cfg.ACTION_PIPELINE = CfgNode()
-    action_module_cfg.ACTION_PIPELINE.IS_DETERMINISTIC = True
-    action_module_cfg.ACTION_PIPELINE.GLOBAL_POLICY_POLLING_FREQUENCY = 10
+    action_module_cfg.ACTION_PIPELINE.IS_DETERMINISTIC = False
+    action_module_cfg.ACTION_PIPELINE.GLOBAL_POLICY_POLLING_FREQUENCY = 25
     return action_module_cfg
 
 def default_data_generator_cfg() -> CfgNode:
@@ -109,3 +110,34 @@ def default_train_cfg() -> CfgNode:
     train_cfg.OPTIM_STEP_SIZE = 3
     train_cfg.OPTIM_GAMMA = 0.1    
     return train_cfg
+
+def default_perception_model_cfg() -> CfgNode:
+    perception_model_config = CfgNode()
+    perception_model_config.USE_INITIAL_TRANSFORMS = True
+    perception_model_config.SCORE_THRESHOLD = 0.5
+    perception_model_config.MASK_THRESHOLD = 0.5
+    perception_model_config.BATCH_SIZE = 5
+    return perception_model_config
+
+
+def default_env_cfg() -> CfgNode:
+    env_cfg = CfgNode()
+    env_cfg.GLOBAL_POLICY_POLLING_FREQUENCY = 10
+    env_cfg.GAINFUL_CURIOUSITY_THRESHOLD = 0.9
+    env_cfg.MAX_STEPS = 100
+    return env_cfg
+
+
+def default_action_training_cfg() -> CfgNode:
+    action_training_cfg = CfgNode()
+    action_training_cfg.NUM_EPOCHS = 10
+    action_training_cfg.BATCH_SIZE = 32
+    action_training_cfg.NUM_STEPS_PER_EPISODE = 100
+    action_training_cfg.NUM_TOTAL_STEPS = 10000
+    action_training_cfg.SCENES = ["minival/00801-HaxA7YrQdEC"]
+    action_training_cfg.MODEL_PATH = ""
+    action_training_cfg.LEARNING_RATE = 0.0001
+    action_training_cfg.DISCOUNT_FACTOR = 0.99
+    action_training_cfg.ENTROPY_COEFFICIENT = 0.01
+    action_training_cfg.VALUE_LOSS_COEFFICIENT = 0.5
+    return action_training_cfg

@@ -143,3 +143,8 @@ dmypy.json
 
 # Euler
 /server_out/
+runs/
+wandb/
+
+# Models
+models/

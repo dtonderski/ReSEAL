@@ -27,7 +27,7 @@ class SemanticMap3DBuilder:
     def __init__(self, map_builder_cfg: CfgNode, sim_cfg: CfgNode) -> None:
         self._resolution = map_builder_cfg.RESOLUTION  # m per voxel
         self._num_semantic_classes = map_builder_cfg.NUM_SEMANTIC_CLASSES
-        self._map_size = np.array(map_builder_cfg.MAP_SIZE) / 2
+        self._map_size = np.array(map_builder_cfg.MAP_SIZE)
         self._intrinsic = get_camera_intrinsic_from_cfg(sim_cfg.SENSOR_CFG)
 
         # Master stores all points added to the map builder
@@ -97,6 +97,19 @@ class SemanticMap3DBuilder:
     def resolution(self) -> float:
         return self._resolution
 
+    @property
+    def semantic_map_size(self) -> Tuple[int, int, int, int]:
+        """Size of semantic map in voxels"""
+        if self._semantic_map is None:
+            raise RuntimeError("Trying to access semantic map before it is calculated!")
+        return self._semantic_map.shape
+
+    @property
+    def semantic_map_at_pose_shape(self) -> Tuple[int, int, int, int]:
+        """Size of semantic map when calling semantic_map_at_pose in voxels"""
+        map_shape = coordinates_to_grid_indices(np.array(self._map_size), (0, 0, 0), self._resolution)
+        return (map_shape[0], map_shape[1], map_shape[2], self._num_semantic_classes + 1)
+
     def semantic_map_at_pose(self, pose: datatypes.Pose) -> datatypes.SemanticMap3D:
         """Calculates the voxel semantic map at a given pose.
         The size of the map is according to the MAP_SIZE configuration (given in m)
@@ -104,8 +117,8 @@ class SemanticMap3DBuilder:
         if self._semantic_map is None:
             raise ValueError("Trying to access semantic map before it is calculated!")
         position = np.array(pose[0])
-        map_bound_min = position - self._map_size
-        map_bound_max = position + self._map_size
+        map_bound_min = position - self._map_size / 2
+        map_bound_max = position + self._map_size / 2
         grid_index_of_origin = self.get_grid_index_of_origin()
         min_index = coordinates_to_grid_indices(map_bound_min.T, grid_index_of_origin, self._resolution)
         max_index = coordinates_to_grid_indices(map_bound_max.T, grid_index_of_origin, self._resolution)
@@ -123,12 +136,15 @@ class SemanticMap3DBuilder:
             dim_with_max_offset = max_index >= semantic_map_shape
             max_offset[dim_with_max_offset] = max_index[dim_with_max_offset] - semantic_map_shape[dim_with_max_offset]
             max_index[dim_with_max_offset] = semantic_map_shape[dim_with_max_offset]
-        map_at_pose[
-            min_offset[0] : map_shape[0] - max_offset[0],
-            min_offset[1] : map_shape[1] - max_offset[1],
-            min_offset[2] : map_shape[2] - max_offset[2],
-            :,
-        ] = self._semantic_map[min_index[0] : max_index[0], min_index[1] : max_index[1], min_index[2] : max_index[2], :]
+        try:
+            map_at_pose[
+                min_offset[0] : map_shape[0] - max_offset[0],
+                min_offset[1] : map_shape[1] - max_offset[1],
+                min_offset[2] : map_shape[2] - max_offset[2],
+                :,
+            ] = self._semantic_map[min_index[0] : max_index[0], min_index[1] : max_index[1], min_index[2] : max_index[2], :]
+        except ValueError:
+            raise RuntimeError(f"Invalid indices {min_index} {max_index} from pose {pose}")
         if np.any(min_index < 0) or np.any(max_index > self._semantic_map.shape[:-1]):
             raise RuntimeError("Invalid pose (%s, %s, %s)", min_index, max_index, self._semantic_map.shape)
         return map_at_pose
@@ -206,6 +222,11 @@ class SemanticMap3DBuilder:
         )
 
         self._sync_master_point_cloud_and_labels(temporary_point_cloud_semantic_labels)
+
+    def clear_semantic_map(self):
+        """Clears the semantic map"""
+        self._semantic_map = None
+        self._semantic_map_bounds = None
 
     def get_grid_index_of_origin(self) -> NDArray[Shape["3"], Int]:
         """ This function is needed because when raytracing in a grid we need the grid index of the origin.
