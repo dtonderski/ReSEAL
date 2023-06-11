@@ -63,7 +63,6 @@ class SemanticMapFeatureExtractor(BaseFeaturesExtractor):
             nn.Conv3d(256, 512, kernel_size=5, stride=1, padding=0),
             nn.ReLU(),
             nn.Flatten(),
-            nn.BatchNorm1d(512),
         )
 
         # Compute shape by doing one forward pass
