@@ -37,7 +37,7 @@ class SemanticMapFeatureExtractor(BaseFeaturesExtractor):
                 )
 
         total_concat_size = self._cnn_flatten_output_dim + 32
-        self.linear = nn.Sequential(nn.Linear(total_concat_size, features_dim), nn.ReLU())
+        self.linear = nn.Sequential(nn.Linear(total_concat_size, features_dim), nn.SELU())
 
         self.extractors = nn.ModuleDict(extractors)
 
