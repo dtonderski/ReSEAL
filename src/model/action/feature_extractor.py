@@ -19,7 +19,7 @@ class SeparableConv3d(nn.Module):
 class SemanticMapFeatureExtractor(BaseFeaturesExtractor):
     """Custom feature extractor for semantic map observations."""
     def __init__(self, observation_space: spaces.Dict, features_dim: int = 512):
-        super().__init__(observation_space, features_dim=features_dim)
+        super().__init__(observation_space, features_dim=features_dim)  
 
         extractors = {}
 
@@ -53,22 +53,29 @@ class SemanticMapFeatureExtractor(BaseFeaturesExtractor):
    def _init_map_feature_extractor(self, map_obs_space: spaces.Box) -> None:
         n_input_channels = map_obs_space.shape[0]
         self._map_feature_extractor = nn.Sequential(
-            SeparableConv3d(n_input_channels, 32, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
-            SeparableConv3d(32, 64, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
-            SeparableConv3d(64, 128, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
-            SeparableConv3d(128, 256, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
-            SeparableConv3d(256, 512, kernel_size=5, stride=1, padding=0),
-            nn.ReLU(),
-            nn.Flatten(),
-        )
+        SeparableConv3d(n_input_channels, 8, kernel_size=3, stride=1, padding=1),
+        nn.SELU(),
+        nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
+        SeparableConv3d(8, 16, kernel_size=3, stride=1, padding=1),
+        nn.SELU(),
+        nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
+        SeparableConv3d(16, 32, kernel_size=3, stride=1, padding=1),
+        nn.SELU(),
+        nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
+        SeparableConv3d(32, 64, kernel_size=3, stride=1, padding=1),
+        nn.SELU(),
+        nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
+        SeparableConv3d(64, 128, kernel_size=3, stride=1, padding=1),
+        nn.SELU(),
+        nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
+        SeparableConv3d(128, 256, kernel_size=3, stride=1, padding=1),
+        nn.SELU(),
+        nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
+        SeparableConv3d(256, 512, kernel_size=5, stride=1, padding=0),
+        nn.SELU(),
+        nn.AdaptiveAvgPool3d((1, 1, 1)),  # Global pooling to reduce spatial dimensions to 1x1x1
+        nn.Flatten(),
+    )
 
         # Compute shape by doing one forward pass
         with torch.no_grad():
