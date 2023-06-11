@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import gymnasium as gym
 import habitat_sim
 import torch
+from stable_baselines3 import PPO
 from stable_baselines3.common import policies
 from stable_baselines3.common.distributions import Distribution
 from stable_baselines3.common.type_aliases import Schedule
@@ -106,6 +107,8 @@ def create_global_policy(
         if return_kwargs:
             raise RuntimeError("LoadTrainedPolicy does not support return_kwargs")
         return policies.MultiInputActorCriticPolicy.load(global_policy_cfg.MODEL_PATH)
+    if global_policy_cfg.NAME == "LoadTrainedPolicyWithSB3":
+        return PPO.load(global_policy_cfg.MODEL_PATH).policy
 
     raise RuntimeError(f"Unknown global policy: {global_policy_cfg.NAME}")
 

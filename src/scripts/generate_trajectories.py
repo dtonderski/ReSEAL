@@ -18,7 +18,7 @@ from src.model.action.utils import Counter, ObservationCache
 def main(
     scene_name: str = "minival/00800-TEEsavR23oF",
     start_position: datatypes.Coordinate3D = (0.0, 0.0, 0.0),
-    max_num_steps: int = 200,
+    max_num_steps: int = 400,
     goal_position: Optional[datatypes.Coordinate3D] = None,
     use_random_policy: bool = False,
     commands_file: Optional[str] = None,
@@ -65,7 +65,8 @@ def main(
         perception_model = ModelWrapper(perception_model_cfg, device='cuda')
         # Initialize action pipeline
         action_module_cfg.PREPROCESSOR.NAME = "ChannelFirstPreprocessor"
-        action_module_cfg.GLOBAL_POLICY.NAME = "LoadTrainedPolicy"
+        action_module_cfg.GLOBAL_POLICY.NAME = "LoadTrainedPolicyWithSB3"
+        action_module_cfg.GLOBAL_POLICY.MODEL_PATH = "models/policy.zip"
         action_module_cfg.GLOBAL_POLICY.MAP_SHAPE = map_builder.semantic_map_at_pose_shape
         action_pipeline = pipeline.create_action_pipeline(action_module_cfg, str(data_paths.navmesh_filepath), agent)
         # Initialize observation cache to batch perception model inference
