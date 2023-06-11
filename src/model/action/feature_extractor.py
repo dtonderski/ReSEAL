@@ -41,20 +41,40 @@ class SemanticMapFeatureExtractor(BaseFeaturesExtractor):
 
     def _init_map_feature_extractor(self, map_obs_space: spaces.Box) -> None:
         n_input_channels = map_obs_space.shape[0]
+
+      # Residual connection block
+        class ResidualBlock(nn.Module):
+            def __init__(self, in_channels, out_channels, kernel_size, stride, padding):
+                super(ResidualBlock, self).__init__()
+                self.conv1 = nn.Conv3d(in_channels, out_channels, kernel_size, stride, padding)
+                self.relu = nn.ReLU()
+                self.conv2 = nn.Conv3d(out_channels, out_channels, kernel_size, stride, padding)
+                self.dropout = nn.Dropout(dropout_prob)
+                self.batchnorm = nn.BatchNorm3d(out_channels)
+
+            def forward(self, x):
+                residual = x
+                out = self.conv1(x)
+                out = self.batchnorm(out)
+                out = self.relu(out)
+                out = self.conv2(out)
+                out += residual  # Skip connection
+                out = self.batchnorm(out)
+                out = self.relu(out)
+                out = self.dropout(out)
+                return out
+
         self._map_feature_extractor = nn.Sequential(
-            nn.Conv3d(n_input_channels, 32, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
+            ResidualBlock(n_input_channels, 32, kernel_size=3, stride=1, padding=1),
             nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
-            nn.Conv3d(32, 64, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
+            ResidualBlock(32, 64, kernel_size=3, stride=1, padding=1),
             nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
-            nn.Conv3d(64, 128, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
+            ResidualBlock(64, 128, kernel_size=3, stride=1, padding=1),
             nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
-            nn.Conv3d(128, 256, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
+            ResidualBlock(128, 256, kernel_size=3, stride=1, padding=1),
             nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
-            nn.Conv3d(256, 512, kernel_size=5, stride=1, padding=0),
+            ResidualBlock(256, 512, kernel_size=5, stride=1, padding=0),
+            nn.Conv3d(512, 512, kernel_size=1, stride=1, padding=0),  # Additional convolutional layer
             nn.ReLU(),
             nn.Flatten(),
         )
