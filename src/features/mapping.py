@@ -111,12 +111,15 @@ class SemanticMap3DBuilder:
             dim_with_max_offset = max_index >= semantic_map_shape
             max_offset[dim_with_max_offset] = max_index[dim_with_max_offset] - semantic_map_shape[dim_with_max_offset]
             max_index[dim_with_max_offset] = semantic_map_shape[dim_with_max_offset]
-        map_at_pose[
-            min_offset[0] : map_shape[0] - max_offset[0],
-            min_offset[1] : map_shape[1] - max_offset[1],
-            min_offset[2] : map_shape[2] - max_offset[2],
-            :,
-        ] = self._semantic_map[min_index[0] : max_index[0], min_index[1] : max_index[1], min_index[2] : max_index[2], :]
+        try:
+            map_at_pose[
+                min_offset[0] : map_shape[0] - max_offset[0],
+                min_offset[1] : map_shape[1] - max_offset[1],
+                min_offset[2] : map_shape[2] - max_offset[2],
+                :,
+            ] = self._semantic_map[min_index[0] : max_index[0], min_index[1] : max_index[1], min_index[2] : max_index[2], :]
+        except ValueError:
+            raise RuntimeError(f"Invalid indices {min_index} {max_index} from pose {pose}")
         if np.any(min_index < 0) or np.any(max_index > self._semantic_map.shape[:-1]):
             raise RuntimeError("Invalid pose (%s, %s, %s)", min_index, max_index, self._semantic_map.shape)
         return map_at_pose
