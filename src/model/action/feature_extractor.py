@@ -31,9 +31,9 @@ class SemanticMapFeatureExtractor(BaseFeaturesExtractor):
                 # Run through a simple MLP
                 extractors[key] = nn.Sequential(
                     nn.Linear(3, 16),
-                    nn.LeakyReLU(),
+                    nn.SELU(),
                     nn.Linear(16, 32),
-                    nn.LeakyReLU(),
+                    nn.SELU(),
                 )
 
         total_concat_size = self._cnn_flatten_output_dim + 32
