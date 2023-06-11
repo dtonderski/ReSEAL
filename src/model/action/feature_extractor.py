@@ -20,9 +20,11 @@ class SemanticMapFeatureExtractor(BaseFeaturesExtractor):
                 # Run through a simple MLP
                 extractors[key] = nn.Sequential(
                     nn.Linear(3, 16),
-                    nn.LeakyReLU(),
+                    nn.Tanh(),
+                    nn.BatchNorm1d(16),
                     nn.Linear(16, 32),
-                    nn.LeakyReLU(),
+                    nn.Tanh(),
+                    nn.BatchNorm1d(32),
                 )
 
         total_concat_size = self._cnn_flatten_output_dim + 32
@@ -43,18 +45,23 @@ class SemanticMapFeatureExtractor(BaseFeaturesExtractor):
         n_input_channels = map_obs_space.shape[0]
         self._map_feature_extractor = nn.Sequential(
             nn.Conv3d(n_input_channels, 32, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm3d(32),
             nn.ReLU(),
             nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
             nn.Conv3d(32, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm3d(64),
             nn.ReLU(),
             nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
             nn.Conv3d(64, 128, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm3d(128),
             nn.ReLU(),
             nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
             nn.Conv3d(128, 256, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm3d(256),
             nn.ReLU(),
             nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
             nn.Conv3d(256, 512, kernel_size=5, stride=1, padding=0),
+            nn.BatchNorm3d(512),
             nn.ReLU(),
             nn.Flatten(),
         )
