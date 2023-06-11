@@ -20,13 +20,13 @@ class SemanticMapFeatureExtractor(BaseFeaturesExtractor):
                 # Run through a simple MLP
                 extractors[key] = nn.Sequential(
                     nn.Linear(3, 16),
-                    nn.LeakyReLU(),
+                    nn.SELU(),
                     nn.Linear(16, 32),
-                    nn.LeakyReLU(),
+                    nn.SELU(),
                 )
 
         total_concat_size = self._cnn_flatten_output_dim + 32
-        self.linear = nn.Sequential(nn.Linear(total_concat_size, features_dim), nn.ReLU())
+        self.linear = nn.Sequential(nn.Linear(total_concat_size, features_dim), nn.SELU())
 
         self.extractors = nn.ModuleDict(extractors)
 
@@ -47,7 +47,7 @@ class SemanticMapFeatureExtractor(BaseFeaturesExtractor):
             def __init__(self, in_channels, out_channels, kernel_size, stride, padding):
                 super(ResidualBlock, self).__init__()
                 self.conv1 = nn.Conv3d(in_channels, out_channels, kernel_size, stride, padding)
-                self.relu = nn.ReLU()
+                self.selu = nn.SELU()
                 self.conv2 = nn.Conv3d(out_channels, out_channels, kernel_size, stride, padding)
                 self.dropout = nn.Dropout(dropout_prob)
                 self.batchnorm = nn.BatchNorm3d(out_channels)
@@ -56,11 +56,11 @@ class SemanticMapFeatureExtractor(BaseFeaturesExtractor):
                 residual = x
                 out = self.conv1(x)
                 out = self.batchnorm(out)
-                out = self.relu(out)
+                out = self.selu(out)
                 out = self.conv2(out)
                 out += residual  # Skip connection
                 out = self.batchnorm(out)
-                out = self.relu(out)
+                out = self.selu(out)
                 out = self.dropout(out)
                 return out
 
@@ -75,7 +75,7 @@ class SemanticMapFeatureExtractor(BaseFeaturesExtractor):
             nn.MaxPool3d(kernel_size=2, stride=2, padding=0),
             ResidualBlock(256, 512, kernel_size=5, stride=1, padding=0),
             nn.Conv3d(512, 512, kernel_size=1, stride=1, padding=0),  # Additional convolutional layer
-            nn.ReLU(),
+            nn.SELU(),
             nn.Flatten(),
         )
 
