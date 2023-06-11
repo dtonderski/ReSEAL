@@ -1,10 +1,10 @@
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import gymnasium as gym
 import habitat_sim
 import torch
-from stable_baselines3.common.distributions import Distribution
 from stable_baselines3.common import policies
+from stable_baselines3.common.distributions import Distribution
 from stable_baselines3.common.type_aliases import Schedule
 from yacs.config import CfgNode
 
@@ -66,7 +66,7 @@ class RandomGlobalPolicy(policies.ActorCriticPolicy):
 
 def create_global_policy(
     global_policy_cfg: CfgNode,
-    navmesh_filepath: str,
+    navmesh_filepath: Union[str, List[str]],
     return_kwargs: bool = False,
     **kwargs,
 ) -> Union[Dict[str, Any], policies.ActorCriticPolicy]:
@@ -78,6 +78,7 @@ def create_global_policy(
     if global_policy_cfg.NAME == "RandomGlobalPolicy":
         if return_kwargs:
             raise RuntimeError("RandomGlobalPolicy does not support return_kwargs")
+        assert isinstance(navmesh_filepath, str), "RandomGlobalPolicy only supports single navmesh_filepath"
         return RandomGlobalPolicy(
             observation_space=observation_space,
             action_space=action_space,

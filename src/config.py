@@ -103,7 +103,7 @@ def default_action_training_cfg() -> CfgNode:
     action_training_cfg.BATCH_SIZE = 32
     action_training_cfg.NUM_STEPS_PER_EPISODE = 100
     action_training_cfg.NUM_TOTAL_STEPS = 10000
-    action_training_cfg.NUM_ENVS = 1
+    action_training_cfg.SCENES = ["minival/00801-HaxA7YrQdEC"]
     action_training_cfg.MODEL_PATH = ""
     action_training_cfg.LEARNING_RATE = 0.0001
     action_training_cfg.DISCOUNT_FACTOR = 0.99
