@@ -1,0 +1,6 @@
+PREPROCESSOR:
+  NAME: ChannelFirstPreprocessor
+
+GLOBAL_POLICY:
+  NAME: LoadTrainedPolicy
+  MODEL_PATH: models/global_policy/3D_conv.pth
